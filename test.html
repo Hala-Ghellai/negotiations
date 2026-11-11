@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تفاهم — اختبارات المنصة | Tafahum test suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --brand: #0d5c6b; --gold: #c9a227; --ok: #2e8b57; --bad: #b3492f; --line: #e3e8ea; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', system-ui, sans-serif; background: #f4f7f8; color: #1d2b2e; margin: 0; direction: rtl; }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 34px 20px 60px; }
+    h1 { color: var(--brand); font-size: 22px; margin: 0 0 4px; }
+    .sub { color: #5c7075; font-size: 13.5px; margin-bottom: 22px; }
+    .summary { display: flex; gap: 14px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px; }
+    .summary b { font-size: 26px; }
+    .pass { color: var(--ok); } .fail { color: var(--bad); }
+    .bar { flex: 1; height: 10px; border-radius: 6px; background: #eef2f3; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--ok); transition: .4s; }
+    ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+    li { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; font-size: 14px; display: flex; gap: 10px; align-items: baseline; }
+    li .tick { font-weight: 800; flex: none; }
+    li.ok .tick { color: var(--ok); } li.bad { border-color: #ecc; background: #fdf6f5; } li.bad .tick { color: var(--bad); }
+    li .ms { color: #8ba0a5; font-size: 11.5px; margin-inline-start: auto; flex: none; }
+    li .err { display: block; color: var(--bad); font-size: 12.5px; margin-top: 4px; white-space: pre-wrap; }
+    .note { margin-top: 18px; color: #5c7075; font-size: 12.5px; }
+    code { background: #eef2f3; padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>اختبارات منصة تفاهم — Tafahum test suite</h1>
+    <p class="sub">نفس حزمة الاختبارات التي تعمل عبر <code>node tests/run.mjs</code> — تعمل هنا داخل المتصفح مباشرة.</p>
+    <div class="summary" id="summary">جارٍ التشغيل…</div>
+    <ul id="results"></ul>
+    <p class="note">تغطي الحزمة: الترجمة الثنائية، مكتبة السيناريوهات، المحلل اللغوي، المقيّم، محرك الطرف الآخر، المدرب، مقياس الأسلوب، مكتبة المعرفة، الرسوم، كاتب PDF، والتقارير.</p>
+  </div>
+
+  <!-- modules under test (same order as index.html) -->
+  <script src="assets/js/core.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/scenarios.js"></script>
+  <script src="assets/js/analyzer.js"></script>
+  <script src="assets/js/evaluator.js"></script>
+  <script src="assets/js/engine.js"></script>
+  <script src="assets/js/coach.js"></script>
+  <script src="assets/js/diagnostic.js"></script>
+  <script src="assets/js/knowledge.js"></script>
+  <script src="assets/js/charts.js"></script>
+  <script src="assets/js/pdfwriter.js"></script>
+  <script src="assets/js/report.js"></script>
+  <script src="tests/suite.js"></script>
+  <script>
+    (function () {
+      const results = TFT.run();
+      const list = document.getElementById('results');
+      const passed = results.filter(r => r.ok).length;
+      for (const r of results) {
+        const li = document.createElement('li');
+        li.className = r.ok ? 'ok' : 'bad';
+        li.innerHTML = '<span class="tick">' + (r.ok ? '✓' : '✗') + '</span><span>' + r.name +
+          (r.ok ? '' : '<span class="err"></span>') + '<span class="ms">' + r.ms + 'ms</span></span>';
+        if (!r.ok) li.querySelector('.err').textContent = r.err;
+        list.appendChild(li);
+      }
+      const pct = Math.round(passed / results.length * 100);
+      document.getElementById('summary').innerHTML =
+        '<b class="' + (passed === results.length ? 'pass' : 'fail') + '">' + passed + '/' + results.length + '</b>' +
+        '<span>' + (passed === results.length ? 'كل الاختبارات ناجحة ✅' : 'فشلت بعض الاختبارات ❌') + '</span>' +
+        '<span class="bar"><i style="width:' + pct + '%"></i></span>';
+      document.title = (passed === results.length ? '✅ ' : '❌ ') + document.title;
+    })();
+  </script>
+</body>
+</html>
