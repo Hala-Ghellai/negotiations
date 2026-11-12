@@ -17,6 +17,7 @@
     /* nav */
     nav_home: 'الرئيسية', nav_diagnostic: 'مقياس الأسلوب', nav_learn: 'مكتبة المعرفة',
     nav_simulate: 'مختبر المحاكاة', nav_dashboard: 'لوحة الأداء',
+    coming_soon: 'سيتوفر قريباً',
     settings: 'الإعدادات', lang_toggle: 'English', lang_switched: 'تم التحويل إلى العربية',
 
     /* generic */
@@ -44,8 +45,10 @@
     /* home */
     hero_badge: 'المنصة الوطنية الرقمية لتنمية مهارات التفاوض وإدارة الحوار',
     hero_title: 'تدرّب على التفاوض كما تمارسه فعلاً',
+    hero_title_1: 'تدرّب على', hero_title_hl: 'التفاوض', hero_title_2: 'كما تمارسه فعلاً',
     hero_sub: 'محاكاة تفاعلية داخل سيناريوهات حكومية، مع قياس علمي للأداء وتغذية راجعة فورية — بدلاً من ورش متفرقة لا تترك أثراً مؤسسياً.',
     hero_cta: 'ابدأ رحلة التدريب', hero_cta2: 'استكشف السيناريوهات',
+    hero_trust_1: 'محاكاة تفاعلية', hero_trust_2: 'تقييم بمحكّات واضحة', hero_trust_3: 'تقرير إرشادي PDF',
     stat_scenarios: 'سيناريوهات حكومية', stat_langs: 'لغتان (عربي/إنجليزي)',
     stat_criteria: 'محكّات تقييم', stat_units: 'وحدات تعلّم قصيرة',
     why_title: 'لماذا هذه المنصة؟',
@@ -214,6 +217,7 @@
 
     nav_home: 'Home', nav_diagnostic: 'Style Assessment', nav_learn: 'Knowledge Library',
     nav_simulate: 'Simulation Lab', nav_dashboard: 'Performance Dashboard',
+    coming_soon: 'Coming soon',
     settings: 'Settings', lang_toggle: 'العربية', lang_switched: 'Switched to English',
 
     start: 'Start', next: 'Next', back: 'Back', finish: 'Finish', save: 'Save', cancel: 'Cancel',
@@ -238,8 +242,10 @@
 
     hero_badge: 'The national digital platform for negotiation and dialogue-management skills',
     hero_title: 'Train on negotiation the way you actually practice it',
+    hero_title_1: 'Train on', hero_title_hl: 'negotiation', hero_title_2: 'the way you actually practice it',
     hero_sub: 'Interactive simulation inside government scenarios, with scientific performance measurement and instant feedback — instead of scattered workshops that leave no institutional trace.',
     hero_cta: 'Start your training journey', hero_cta2: 'Explore scenarios',
+    hero_trust_1: 'Interactive simulation', hero_trust_2: 'Rubric-based evaluation', hero_trust_3: 'PDF guidance report',
     stat_scenarios: 'government scenarios', stat_langs: 'two languages (AR/EN)',
     stat_criteria: 'evaluation criteria', stat_units: 'short learning units',
     why_title: 'Why this platform?',

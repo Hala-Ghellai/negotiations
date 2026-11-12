@@ -151,17 +151,32 @@
 
   function dimSynonyms(d) {
     const words = [];
+    const seen = new Set();
     const push = v => {
       if (!v) return;
       const n = TFA.normalize(String(v));
-      for (const w of n.split(/\s+/)) if (w.length >= 3 && !STOP.has(w)) words.push(w);
+      const forms = new Set([n]);
+      /* The label often carries the definite article while the trainee's
+         sentence does not ("الزيادة" vs "زيادة"). Add the bare form too. */
+      if (n.startsWith('ال') && n.length > 4) forms.add(n.slice(2));
+      /* Normalisation keeps ta-marbuta; cue banks are written with either
+         ta-marbuta or ha. Keep both spellings so neither misses. */
+      for (const f of [...forms]) {
+        if (f.includes('ة')) forms.add(f.replace(/ة/g, 'ه'));
+        if (f.includes('ه')) forms.add(f.replace(/ه/g, 'ة'));
+      }
+      for (const f of forms) {
+        if (f.length >= 3 && !STOP.has(f) && !seen.has(f)) { seen.add(f); words.push(f); }
+      }
     };
-    push(d.id); push(L(d.label, 'ar')); push(L(d.label, 'en'));
-    if (d.unit === '%') words.push('نسبه', 'نسبة', 'مئويه', 'بالمئه', 'زياده', 'اعتماد', 'سعر', 'قيمه', 'تمويل', 'مبلغ', 'percent', 'percentage', 'increase', 'price', 'funding', 'amount');
-    if (d.unit === 'mo') words.push('شهر', 'اشهر', 'شهور', 'تجزئه', 'دفعات', 'مرحلي', 'phasing', 'months', 'installments');
-    if (d.unit === 'd') words.push('يوم', 'ايام', 'تمديد', 'مهله', 'days', 'extension', 'deadline');
-    if (d.unit === 'w') words.push('اسبوع', 'اسابيع', 'مراجعه', 'weeks', 'review');
-    if (d.unit === '' || d.unit === 'staff') words.push('موظف', 'موظفين', 'كادر', 'عدد', 'اشخاص', 'staff', 'count', 'people');
+    for (const v of [d.id, L(d.label, 'ar'), L(d.label, 'en')]) {
+      for (const w of TFA.normalize(String(v || '')).split(/\s+/)) push(w);
+    }
+    if (d.unit === '%') ['نسبه', 'نسبة', 'مئويه', 'بالمئه', 'زياده', 'اعتماد', 'سعر', 'قيمه', 'تمويل', 'مبلغ', 'percent', 'percentage', 'increase', 'price', 'funding', 'amount'].forEach(push);
+    if (d.unit === 'mo') ['شهر', 'اشهر', 'شهور', 'تجزئه', 'دفعات', 'مرحلي', 'phasing', 'months', 'installments'].forEach(push);
+    if (d.unit === 'd') ['يوم', 'ايام', 'تمديد', 'مهله', 'days', 'extension', 'deadline'].forEach(push);
+    if (d.unit === 'w') ['اسبوع', 'اسابيع', 'مراجعه', 'weeks', 'review'].forEach(push);
+    if (d.unit === '' || d.unit === 'staff') ['موظف', 'موظفين', 'كادر', 'عدد', 'اشخاص', 'staff', 'count', 'people'].forEach(push);
     return words;
   }
 
@@ -172,7 +187,7 @@
     return (session.scenario.dimensions || []).map(d => {
       let score = 0;
       for (const w of dimSynonyms(d)) {
-        if (w && norm.indexOf(w) !== -1) score += w.length >= 4 ? 2 : 1;
+        if (hasTerm(norm, w)) score += w.length >= 4 ? 2 : 1;
       }
       if (lastTopic === d.id) score += 2;
       if (pending && pending.dimId === d.id) score += 2;
@@ -229,7 +244,10 @@
     const parts = [];
     for (const d of session.scenario.dimensions || []) {
       if (values[d.id] == null) continue;
-      parts.push(L(d.label, lang) + ': ' + values[d.id] + (d.unit ? ' ' + unitLabel(d.unit, values[d.id], lang) : ''));
+      const suffix = d.unit === '%'
+        ? '%'
+        : (d.unit ? ' ' + unitLabel(d.unit, values[d.id], lang) : '');
+      parts.push(L(d.label, lang) + ': ' + values[d.id] + suffix);
     }
     return parts.join(lang === 'ar' ? '، ' : '; ');
   }
@@ -330,7 +348,11 @@
 
   function answersPending(session, analysis, norm, acts, questionLike, yesNo) {
     const pending = session.cp && session.cp.pendingQuestion;
-    if (!pending || questionLike) return false;
+    if (!pending) return false;
+    /* A proposal phrased as a question ("what if we package it as…?")
+       still moves the conversation forward and supersedes the pending
+       question; a pure clarification or information question does not. */
+    if (questionLike && !(acts.offer || acts.proposeOption || acts.condition)) return false;
     if (acts.offer || acts.reject || acts.accept || acts.object || acts.condition ||
         acts.explain || acts.uncertain || acts.defer) return true;
     if (yesNo || analysis.numbers.length) return true;
@@ -458,12 +480,19 @@
     const condition = extractCondition(raw, norm);
 
     /* A number inside a pure question ("why 13%?") is a reference to a
-       value under discussion, not a new proposal. Only a message that
-       carries an offer cue (or is not a question at all) updates the
-       trainee's substantive position. */
+       value under discussion, not a new proposal. The same applies to
+       descriptive or explanatory statements ("demand rose 40% because…")
+       and to answers explaining the situation: those numbers describe
+       the context, not a position the trainee is offering. Only a
+       message carrying an offer cue, or a bare positional statement,
+       updates the trainee's substantive position. */
     const questionLike = !!analysis.intents.question || /[?؟]/.test(raw);
     const offerCue = !!analysis.intents.offer || hasAny(norm, LEX.offer);
-    const proposalValues = (questionLike && !offerCue) ? {} : values;
+    const pendingQuestion = session.cp && session.cp.pendingQuestion;
+    const descriptive = /(ارتفع|ارتفاع|بلغ|وصل|سجل|كان|كانت|اصبح|اصبحت|تزايد|تزايدت|تراجع|تراجعت|انخفض|انخفضت|يعاني|تعاني|نعاني|حدث|حدثت|ادى|ادت|تسبب|تسببت)/.test(norm);
+    const contextualNumbers = !offerCue && (descriptive ||
+      (pendingQuestion && !questionLike && (!!analysis.hasReasons || hasAny(norm, LEX.explain))));
+    const proposalValues = ((questionLike || contextualNumbers) && !offerCue) ? {} : values;
     const change = detectChange(session, proposalValues, norm);
 
     const acc = findMarker(norm, LEX.accept);
@@ -662,13 +691,16 @@
   }
 
   function slots(session, frame) {
-    const dim = (frame.target && frame.target.dimId && dimById(session, frame.target.dimId)) || frame.stickingDim || stickingDim(session);
+    const change = frame.change;
+    const changedDim = change && change.dimId ? dimById(session, change.dimId) : null;
+    const dim = changedDim ||
+      (frame.target && frame.target.dimId && dimById(session, frame.target.dimId)) ||
+      frame.stickingDim || stickingDim(session);
     const dims = session.scenario.dimensions || [];
     const dimA = dims[0] ? L(dims[0].label, session.lang) : '';
     const dimB = dims[1] ? L(dims[1].label, session.lang) : (dims[0] ? L(dims[0].label, session.lang) : '');
     const lp = frame.lastProposal || lastProposal(session);
     const pending = session.cp && session.cp.pendingQuestion;
-    const change = frame.change;
     return {
       lastProposal: lp && lp.text ? lp.text : (session.lang === 'ar' ? 'الصيغة المطروحة' : 'the formula on the table'),
       dim: dim ? L(dim.label, session.lang) : (session.lang === 'ar' ? 'البند المطروح' : 'the item on the table'),

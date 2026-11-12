@@ -450,6 +450,79 @@
     ok(s.outcome.quality > 0, 'qualitative quality > 0');
   });
 
+  /* ---------- contextual dialogue regressions ---------- */
+  test('dialogue: an unexpected filler does not consume the opening question', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-filler' });
+    const pending = s.cp.pendingQuestion && s.cp.pendingQuestion.text;
+    ok(pending, 'opening question registered');
+    const res = TENG.userTurn(s, 'همم، هذا رأي مثير للاهتمام.');
+    const reply = res.messages[0].text;
+    ok(reply.includes(pending.slice(0, 18)), 'reply refers back to the unanswered question');
+    ok(/سؤالي|أتبيّن|توضيح/.test(reply), 'reply asks for a genuine clarification');
+    ok(s.cp.pendingQuestion && s.cp.pendingQuestion.text, 'a pending question remains for the next turn');
+  });
+
+  test('dialogue: explanatory numbers are context, not the trainee position', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-explain' });
+    TENG.userTurn(s, 'شكراً لك، أقدّر ظروفكم.');
+    const res = TENG.userTurn(s, 'ارتفع عدد المستفيدين بنسبة 40% بسبب توسّع الخدمات خلال ثمانية أشهر.');
+    eq(Object.keys(s.dialogue.userPositions).length, 0, 'no trainee position recorded from explanation');
+    ok(!res.messages.some(m => m.meta && (m.meta.counter || m.meta.accepted)), 'no counter/acceptance triggered');
+    ok(/توضيح|يفسّر|الأساس/.test(res.messages[0].text), 'reply acknowledges the explanation');
+  });
+
+  test('dialogue: a reason after rejection is tied to the rejected item', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-reason' });
+    TENG.userTurn(s, 'شكراً لك، أقدّر ظروفكم. ما الذي يهمكم أكثر في هذا الملف؟');
+    TENG.userTurn(s, 'نقترح زيادة الاعتماد بنسبة 20% مع تجزئة الصرف على 5 أشهر.');
+    const rej = TENG.userTurn(s, 'لا أوافق على هذا الرقم، فهو غير كافٍ لمعالجة حجم الطلب.');
+    const reason = TENG.userTurn(s, 'لأن الزيادة المقترحة لا تعالج الضغط المتزايد على الخدمة.');
+    const r1 = rej.messages[0].text, r2 = reason.messages[0].text;
+    ok(/سبب|اعتراض|غير كافٍ/.test(r1), 'rejection reply names the stated reason');
+    ok(/يضيّق|قيمة أعلى|اعتراضك جوهري|سبب/.test(r2), 'follow-up reason is answered as part of the same objection');
+    ok(r1 !== r2, 'the reason does not repeat the rejection reply verbatim');
+    ok(/الزيادة|الاعتماد/.test(r2), 'reply keeps the disputed dimension in view');
+  });
+
+  test('dialogue: a changed position is acknowledged with old and new values', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-mind' });
+    TENG.userTurn(s, 'شكراً لك، أقدّر ظروفكم. ما الذي يهمكم أكثر في هذا الملف؟');
+    TENG.userTurn(s, 'نقترح زيادة الاعتماد بنسبة 20% مع تجزئة الصرف على 5 أشهر.');
+    const res = TENG.userTurn(s, 'غيرت رأيي، أقبل زيادة 12% مع تجزئة على 5 أشهر.');
+    const reply = res.messages[0].text;
+    ok(reply.includes('20') && reply.includes('12'), 'reply names the old and new values');
+    ok(/الزيادة|الاعتماد/.test(reply), 'reply names the changed dimension');
+    eq(s.dialogue.userPositions.increase, 12, 'new position recorded');
+  });
+
+  test('dialogue: an unrelated question is answered briefly then the topic resumes', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-offtopic' });
+    TENG.userTurn(s, 'شكراً لك، أقدّر ظروفكم.');
+    const res = TENG.userTurn(s, 'ما هي توقعات الطقس غداً في المدينة؟');
+    const reply = res.messages[0].text;
+    ok(/الطقس/.test(reply), 'off-topic subject acknowledged');
+    ok(/نعود|نسبة الزيادة|الاعتماد/.test(reply), 'reply returns to the negotiation file');
+    ok(!/\{[a-zA-Z_]+\}/.test(reply), 'no unresolved template slot');
+  });
+
+  test('dialogue: an alternative proposal phrased as a question is evaluated as a proposal', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-option' });
+    TENG.userTurn(s, 'شكراً لك، أقدّر ظروفكم. ما الذي يهمكم أكثر في هذا الملف؟');
+    const res = TENG.userTurn(s, 'ما رأيك لو جربنا حزمة مرحلية تربط الزيادة بمؤشرات أداء موثقة مع وفر تشغيلي؟');
+    ok(res.messages.some(m => m.meta && m.meta.package), 'package proposal recognised');
+    ok(s.flags.packagesMatched.length >= 1, 'matched package recorded');
+  });
+
+  test('dialogue: terms format percentages without a separating space', () => {
+    const s = TENG.createSession(TFS.getScenario('budget'), { lang: 'ar', seed: 'ctx-terms' });
+    const terms = TENG.termsText(s, { increase: 8, phasing: 10 }, 'ar');
+    ok(/8%/.test(terms), 'percent attaches to the number');
+    ok(!/8\s+%/.test(terms), 'no space before percent');
+    ok(/10 أشهر/.test(terms), 'counted unit keeps a space');
+    const en = TENG.termsText(s, { increase: 8, phasing: 10 }, 'en');
+    ok(/8%/.test(en) && /10 months/.test(en), 'English terms format correctly');
+  });
+
   test('engine: endSession computes outcome before aggregating (wiring)', () => {
     const s = ratedSession('budget', GOOD_SCRIPT, 'wire-1');
     const out = TENG.endSession(s, 'agreement');

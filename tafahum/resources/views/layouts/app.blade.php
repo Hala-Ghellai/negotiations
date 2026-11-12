@@ -1,3 +1,15 @@
+@php
+    /* Cache-bust the classic asset scripts with one shared version derived
+       from the newest JS source and the Vite build manifest. */
+    $jsModules = ['core', 'i18n', 'scenarios', 'analyzer', 'evaluator', 'dialogue', 'engine',
+        'coach', 'diagnostic', 'knowledge', 'charts', 'pdfwriter', 'report', 'app'];
+    $assetVersion = @filemtime(public_path('build/manifest.json')) ?: 0;
+    foreach ($jsModules as $jsModule) {
+        $assetVersion = max($assetVersion, @filemtime(public_path("assets/js/$jsModule.js")) ?: 0);
+    }
+    $assetVersion = $assetVersion ?: time();
+    $jsAsset = fn (string $name) => asset("assets/js/$name.js") . '?v=' . $assetVersion;
+@endphp
 <!DOCTYPE html>
 <html lang="{{ $locale }}" dir="{{ $dir }}">
 <head>
@@ -76,19 +88,19 @@
     </noscript>
 
     {{-- ============ app modules (classic scripts, engine runs client-side) ============ --}}
-    <script src="{{ asset('assets/js/core.js') }}"></script>
-    <script src="{{ asset('assets/js/i18n.js') }}"></script>
-    <script src="{{ asset('assets/js/scenarios.js') }}"></script>
-    <script src="{{ asset('assets/js/analyzer.js') }}"></script>
-    <script src="{{ asset('assets/js/evaluator.js') }}"></script>
-    <script src="{{ asset('assets/js/dialogue.js') }}"></script>
-    <script src="{{ asset('assets/js/engine.js') }}"></script>
-    <script src="{{ asset('assets/js/coach.js') }}"></script>
-    <script src="{{ asset('assets/js/diagnostic.js') }}"></script>
-    <script src="{{ asset('assets/js/knowledge.js') }}"></script>
-    <script src="{{ asset('assets/js/charts.js') }}"></script>
-    <script src="{{ asset('assets/js/pdfwriter.js') }}"></script>
-    <script src="{{ asset('assets/js/report.js') }}"></script>
-    <script src="{{ asset('assets/js/app.js') }}"></script>
+    <script src="{{ $jsAsset('core') }}"></script>
+    <script src="{{ $jsAsset('i18n') }}"></script>
+    <script src="{{ $jsAsset('scenarios') }}"></script>
+    <script src="{{ $jsAsset('analyzer') }}"></script>
+    <script src="{{ $jsAsset('evaluator') }}"></script>
+    <script src="{{ $jsAsset('dialogue') }}"></script>
+    <script src="{{ $jsAsset('engine') }}"></script>
+    <script src="{{ $jsAsset('coach') }}"></script>
+    <script src="{{ $jsAsset('diagnostic') }}"></script>
+    <script src="{{ $jsAsset('knowledge') }}"></script>
+    <script src="{{ $jsAsset('charts') }}"></script>
+    <script src="{{ $jsAsset('pdfwriter') }}"></script>
+    <script src="{{ $jsAsset('report') }}"></script>
+    <script src="{{ $jsAsset('app') }}"></script>
 </body>
 </html>

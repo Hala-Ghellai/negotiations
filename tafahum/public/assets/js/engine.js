@@ -22,9 +22,9 @@
    ============================================================ */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = factory(require('./analyzer.js'), require('./evaluator.js'), require('./scenarios.js'), require('./core.js'), require('./dialogue.js'));
-  } else root.TENG = factory(root.TFA, root.TFE, root.TFS, root.TF, root.TFDG);
-})(typeof self !== 'undefined' ? self : this, function (TFA, TFE, TFS, TF, TDG) {
+    module.exports = factory(require('./analyzer.js'), require('./evaluator.js'), require('./scenarios.js'), require('./core.js'));
+  } else root.TENG = factory(root.TFA, root.TFE, root.TFS, root.TF);
+})(typeof self !== 'undefined' ? self : this, function (TFA, TFE, TFS, TF) {
   'use strict';
 
   const clamp = TF.clamp, pick = TF.pick;
@@ -134,188 +134,11 @@
       en: ['Let me shorten your path with what I can offer from my side: {counter}. I can defend that before the bodies, and in my view it\u2019s a realistic landing zone.',
         'I\u2019ll put on the table what I have: {counter}. That is my available ceiling within {constraint}, and I believe it\u2019s a reasonable meeting ground.']
     },
-    /* Context-aware clarification. These are not generic error strings:
-       each one names the last proposal, the pending question or the
-       dimension currently in dispute, and offers concrete next moves. */
-    clarifyPending: {
-      ar: ['لم أتبيّن ما إذا كنت تجيب عن سؤالي: «{pending}». هل يمكنك تحديد موقفك منه بكلماتك، لا برقم فقط؟',
-        'سؤالي السابق كان: «{pending}». وإجابتك تحتمل أكثر من معنى؛ وضّح لي: هل توافق على مضمونه أم تتحفظ عليه، ولماذا؟'],
-      en: ['I could not tell whether you were answering my question: “{pending}”. Could you state your position on it in your own words, not just a number?',
-        'My earlier question was: “{pending}”. Your reply admits more than one meaning; clarify whether you agree with its substance or reserve judgment, and why.']
-    },
-    clarifyCounter: {
-      ar: ['لم يتبيّن لي موقفك من الصيغة الأخيرة: {lastProposal}. هل تقبلها، أم ترى تعديلاً على {dim}؟ وإن كان تعديلاً فبأي قيمة؟',
-        'أريد أن أفهم قصدك على نحو صحيح: حديثك يحتمل أن يكون اعتراضاً على {dim}، أو طلباً لتوضيح {lastProposal}. أيّهما تقصد؟',
-        'حتى لا أبني على فهم خاطئ: هل تقصد تعديلاً على {dim}، أم سؤالاً عن {constraint}؟ وكلاهما مدخل مشروع للحوار.'],
-      en: ['I could not pin down your position on the last formula: {lastProposal}. Do you accept it, or do you see a change to {dim}? If a change, at what value?',
-        'I want to understand you correctly: your message could be an objection to {dim}, or a request to clarify {lastProposal}. Which do you mean?',
-        'So that I do not build on a misreading: do you mean a change to {dim}, or a question about {constraint}? Both are legitimate ways into the discussion.']
-    },
-    clarifyOpen: {
-      ar: ['قبل أن نبني على ما ذكرت، أحتاج إلى تحديد بؤرة الحوار: هل تقصد {dimA} أم {dimB}؟ ويمكنك أيضاً أن تطرح اعتراضاً على {constraint} وسأتعامل معه.',
-        'حديثك يحمل أكثر من احتمال. ما الأقرب إلى قصدك: تعديل على {dimA}، أم سؤال عن {dimB}، أم ملاحظة على {constraint}؟'],
-      en: ['Before we build on what you said, I need to locate the focus: do you mean {dimA} or {dimB}? You may also raise an objection to {constraint}, and I will address it.',
-        'Your message carries more than one possibility. Which is closest to your intent: a change to {dimA}, a question about {dimB}, or a remark on {constraint}?']
-    },
-    acknowledgeExplanation: {
-      ar: ['أقدّر هذا التوضيح، فهو يفسّر دوافعك لا موقفك فقط. إذا كان ما ذكرته هو الأساس، فالمساحة التي أستطيع العمل داخلها هي {constraint}؛ فما القيمة التي تطلبها على {dim} في ضوء ذلك؟',
-        'توضيحك مقبول منطقياً، ويغيّر زاوية نظري إلى حدّ ما. لكن {constraint} يظل حداً لا أتجاوزه منفرداً. هل نبني على {dim} رقماً محدداً؟'],
-      en: ['I appreciate that explanation; it clarifies your motives, not merely your position. If that is the basis, the space I can work within is {constraint}; so what value do you seek on {dim} in light of it?',
-        'Your explanation is logically sound and shifts my view somewhat. But {constraint} remains a limit I cannot cross alone. Shall we build a specific number on {dim}?']
-    },
-    handleObjection: {
-      ar: ['اعتراضك على {dim} مفهوم، ولا أتجاهله. لكن {constraint} هو ما يحكم مرونتي؛ فهل نقترح معالجة للاعتراض داخل هذا الحد؟',
-        'أسمع تحفظك على {dim}، وهو تحفظ مشروع. ما الذي يجعله غير كافٍ تحديداً: القيمة أم الضمانات المصاحبة؟'],
-      en: ['Your objection on {dim} is understandable, and I do not ignore it. But {constraint} governs my flexibility; shall we address the objection within that limit?',
-        'I hear your reservation on {dim}, and it is legitimate. What exactly makes it insufficient: the value or the accompanying safeguards?']
-    },
-    handleRejection: {
-      ar: ['أتفهم رفضك للصيغة الأخيرة. لكن الرفض وحده لا يحرّك الملف؛ ما الذي يجعلها غير كافية: {dim}، أم الضمانات، أم الإطار الزمني؟',
-        'سجّلت رفضك بوضوح. لأفهم حدود اعتراضك: هل ترفض المبدأ، أم ترى أن {dim} تحديداً يحتاج قيمة أخرى؟'],
-      en: ['I understand your rejection of the last formula. But rejection alone does not move the file; what makes it insufficient: {dim}, the safeguards, or the timeframe?',
-        'I have recorded your rejection clearly. To understand its limits: do you reject the principle, or does {dim} specifically need another value?']
-    },
-    handleRejectionShort: {
-      ar: ['أفهم أنك ترفض الصيغة السابقة؛ ولذلك سأتعامل مع ما ذكرته الآن بوصفه اقتراحاً بديلاً لا مجرد اعتراض.',
-        'رفضك واضح، واقتراحك الجديد هو ما سأدرسه الآن.'],
-      en: ['I understand that you reject the previous formula; I will therefore treat what you have just stated as an alternative proposal, not merely an objection.',
-        'Your rejection is clear, and your new proposal is what I will examine now.']
-    },
-    handleConditional: {
-      ar: ['إذا كان شرطك هو «{condition}»، فهذا شرط قابل للنقاش. ما أستطيع التزامه داخل {constraint} هو {counter}؛ فهل يقترب هذا من شرطك؟',
-        'أفهم أن قبولك مرهون بـ«{condition}». لنختبر ذلك عملياً: {counter} هو ما يمكنني حمله الآن؛ فهل يكفي لتحقيق شرطك؟'],
-      en: ['If your condition is “{condition}”, it is open to discussion. What I can commit to within {constraint} is {counter}; does that come close to your condition?',
-        'I understand that your acceptance is contingent on “{condition}”. Let us test it practically: {counter} is what I can carry now; is it enough to satisfy your condition?']
-    },
-    acceptConditional: {
-      ar: ['أقبل الصيغة على أساس الشرط الذي ذكرته: «{condition}». {terms} — على أن يُوثّق الشرط صراحة في المحضر.',
-        'موافق، بشرط أن يُثبت في المحضر: «{condition}». والصيغة هي: {terms}.'],
-      en: ['I accept the formula on the basis of the condition you stated: “{condition}”. {terms} — provided the condition is explicitly documented in the minutes.',
-        'Agreed, on condition that the minutes record: “{condition}”. The formula is: {terms}.']
-    },
-    counterConditional: {
-      ar: ['شرطك «{condition}» مفهوم، لكن ما أستطيع حمله الآن هو {counter}؛ فهل يحقق هذا الشرط بما يكفي؟',
-        'لا أستطيع تجاوز {constraint}، لكن {counter} يمثل أقصى ما يمكنني تقديمه الآن مقابل شرطك «{condition}». فهل نقترب من الاتفاق؟'],
-      en: ['Your condition “{condition}” is understandable, but what I can carry now is {counter}; does that satisfy it sufficiently?',
-        'I cannot cross {constraint}, but {counter} is the most I can offer now against your condition “{condition}”. Are we approaching agreement?']
-    },
-    handlePositionChange: {
-      ar: ['سجّلت أن موقفك تغيّر من {old} إلى {new} على {dim}. هذا تحرّك مهم، وأقدّر صراحتك فيه. هل هذا موقفك النهائي أم نقطة انطلاق للحوار؟',
-        'ألاحظ أنك عدت عن قيمة سابقة على {dim} ({old}) إلى {new}. أتعامل مع هذا باعتباره موقفك الحالي، وأقترح أن نبني عليه.'],
-      en: ['I have noted that your position moved from {old} to {new} on {dim}. That is an important move, and I appreciate your candour. Is it your final position or a starting point?',
-        'I notice you moved from an earlier value on {dim} ({old}) to {new}. I will treat this as your current position and suggest we build on it.']
-    },
-    handleMindChange: {
-      ar: ['أقدّر أنك أعدت النظر في موقفك؛ هذا ليس ضعفاً بل مرونة. سأتعامل مع {new} كأساس جديد، لكنني أذكّر بأن {old} كان قد ذُكر سابقاً؛ فهل نثبت التغيير في محضر الجلسة؟',
-        'أعدت النظر في موقفك، وهذا حقك الطبيعي في التفاوض. سأسجّل الانتقال من {old} إلى {new} على {dim}، وأعيد ترتيب حسابي على أساسه.'],
-      en: ['I appreciate that you reconsidered; that is flexibility, not weakness. I will treat {new} as the new basis, while noting that {old} was stated earlier; shall we record the change in the minutes?',
-        'You have reconsidered, which is your natural right in negotiation. I will record the move from {old} to {new} on {dim} and reorder my calculation accordingly.']
-    },
-    handleMindChangeGeneral: {
-      ar: ['أقدّر إعلانك إعادة النظر في موقفك. ما الذي تغيّر تحديداً: القيمة على {dim}، أم ترتيب أولوياتك؟',
-        'إعادة النظر خطوة مشروعة. لأبني عليها بدقة: ما الموقف الجديد الذي تريد أن أسجّله على {dim}؟'],
-      en: ['I appreciate your announcement that you are reconsidering. What exactly changed: the value on {dim}, or your order of priorities?',
-        'Reconsidering is a legitimate step. So that I build on it precisely: what new position should I record on {dim}?']
-    },
-    handleDefer: {
-      ar: ['لا بأس بتأجيل الحسم؛ القرار المتعجل قد يضر الطرفين. أقترح أن نثبّت ما تحقق من نقاط، وأن نحدد موعداً لاستئناف {dim}.',
-        'أحترم رغبتك في التأجيل. قبل ذلك، دعنا نوثّق النقاط التي اقتربت من الاتفاق حتى لا نبدأ من الصفر.'],
-      en: ['Deferring the decision is acceptable; a hasty decision may harm both sides. I suggest we record the points already achieved and set a date to resume {dim}.',
-        'I respect your wish to defer. Before that, let us document the points that came close to agreement so we do not start from scratch.']
-    },
-    handleApology: {
-      ar: ['أقبل اعتذارك، وأقدّر تحمّلك المسؤولية علناً. هذا يخفف الاحتقان ويفتح باب الحل. لننتقل إلى ما يمكن إنجازه اليوم.',
-        'الاعتذار الصريح خطوة مهمة، وأنا أقبله. المطلوب الآن أن يقترن بمسار واضح؛ فما الخطوة العملية التالية؟'],
-      en: ['I accept your apology, and I appreciate your taking responsibility openly. That eases the tension and opens the way to a solution. Let us move to what can be done today.',
-        'A clear apology is an important step, and I accept it. It now needs a clear path; what is the practical next step?']
-    },
-    handleSmalltalk: {
-      ar: ['أشكر سؤالك، وأنا بخير. أفضّل أن نستثمر الوقت في ملف {topic}، لكن لا مانع من لحظة إنسانية قبل العودة إليه.',
-        'أقدّر هذا التواصل الإنساني. لنعد بعد قليل إلى {topic}؛ فما الذي تريد أن نبدأ به؟'],
-      en: ['Thank you for asking; I am well. I would rather invest the time in the {topic} file, though a human moment before returning to it is welcome.',
-        'I appreciate this human exchange. Let us return shortly to {topic}; what would you like us to begin with?']
-    },
-    handleUnrelated: {
-      ar: ['هذا سؤال خارج نطاق ملف {topic}، وسأجيب عنه باختصار: {answer}. أما ما يخدم جلستنا الآن فهو أن نعود إلى {dim}.',
-        'لا أملك في هذه الجلسة معطيات موثوقة عن هذا الموضوع؛ وما أستطيع تأكيده أن الحوار يبقى داخل {topic}. هل نعود إلى {dim}؟'],
-      en: ['That question falls outside the {topic} file, and I will answer it briefly: {answer}. What serves our session now is to return to {dim}.',
-        'I have no reliable data on that subject inside this session; what I can affirm is that the dialogue remains within {topic}. Shall we return to {dim}?']
-    },
-    handleConfusion: {
-      ar: ['سأوضح بلا تعقيد: {explanation}',
-        'التوضيح المطلوب مشروع. {explanation}'],
-      en: ['Let me explain without complication: {explanation}',
-        'The requested clarification is legitimate. {explanation}']
-    },
-    handleQuestionTerms: {
-      ar: ['الصيغة المطروحة الآن هي: {lastProposal}. والقيود الحاكمة هي {constraint}. أي بند تريد أن نفصّله أولاً: {dimA} أم {dimB}؟',
-        'باختصار: {lastProposal}. وأثر ذلك يظهر أساساً في {dim}. هل تريد أن نشرح القيمة أم الضمانات المصاحبة؟'],
-      en: ['The formula on the table is: {lastProposal}. The governing constraints are {constraint}. Which item shall we detail first: {dimA} or {dimB}?',
-        'In short: {lastProposal}. Its effect appears mainly in {dim}. Would you like to discuss the value or the accompanying safeguards?']
-    },
-    handleQuestionWhy: {
-      ar: ['{why}', '{why}'],
-      en: ['{why}', '{why}']
-    },
-    handleQuestionHow: {
-      ar: ['الطريق العملي هو أن نثبت أولاً قيمة على {dim} داخل {constraint}، ثم نربطها بضمانة قابلة للقياس. فإن اتفقنا على القيمة، يصبح التوثيق خطوة تالية لا عقبة.',
-        'نبدأ من البند الأكثر أثراً: {dim}. نحدد له قيمة، ثم نضيف ضمانة زمنية أو معيارية تجعل الاتفاق قابلاً للدفاع أمام المراجعة.'],
-      en: ['The practical path is to fix a value on {dim} within {constraint}, then attach a measurable safeguard. If we agree the value, documentation becomes the next step rather than an obstacle.',
-        'We start with the most consequential item: {dim}. We set its value, then add a time-bound or standards-based safeguard that makes the agreement defensible in review.']
-    },
-    handleQuestionWhen: {
-      ar: ['لا أستطيع تحديد موعد نهائي قبل أن نتفق على {dim}. لكن إذا ثبتت القيمة اليوم، يمكن أن يكون التنفيذ على مراحل تبدأ فوراً.',
-        'الموعد مرتبط بما نتفق عليه على {dim}. أعطني قيمة واقعية، وأستطيع أن ألتزم بجدول زمني واضح داخل {constraint}.'],
-      en: ['I cannot set a final date before we agree on {dim}. But if the value is fixed today, implementation can be phased and begin immediately.',
-        'The date depends on what we agree for {dim}. Give me a realistic value, and I can commit to a clear timetable within {constraint}.']
-    },
-    handleAgreementNoDeal: {
-      ar: ['أوافقك على الفهم، لكن الاتفاق يحتاج صيغة محددة لا نيّة عامة. هل نثبت {dim} بقيمة واضحة الآن؟',
-        'اتفاقنا على المبدأ جيد، لكنه لا يكفي للتوثيق. ما القيمة التي تراها مناسبة على {dim}؟'],
-      en: ['I agree with your understanding, but an agreement needs a specific formula, not a general intention. Shall we fix {dim} at a clear value now?',
-        'Agreement on principle is good, but it is not enough to document. What value do you see as appropriate for {dim}?']
-    },
-    handleInterestStatement: {
-      ar: ['أفهم أن ما يهمك هو {interest}. هذا يفسّر موقفك، ويساعدني على البحث عن صيغة تخدم هذا الاهتمام داخل {constraint}.',
-        'شكراً لأنك أوضحت مصلحتك: {interest}. سأضعها في الاعتبار، فما الوزن النسبي الذي تعطيه لها مقابل {dim}؟'],
-      en: ['I understand that what matters to you is {interest}. That explains your position and helps me search for a formula serving that interest within {constraint}.',
-        'Thank you for clarifying your interest: {interest}. I will take it into account; what relative weight do you give it against {dim}?']
-    },
-    answerPendingBatna: {
-      ar: ['أقدّر أنك أوضحت بديلك بهدوء. هذا لا يغيّر {constraint}، لكنه يجعلني أكثر جدية في البحث عن صيغة قبل أن نصل إلى البديل.',
-        'فهمت بديلك. الوجود خارج الطاولة ممكن، لكنه ليس مجانياً على الطرفين. ما الذي يجعلك تفضّل الاتفاق على البديل؟'],
-      en: ['I appreciate that you stated your alternative calmly. It does not change {constraint}, but it makes me more serious about finding a formula before reaching that alternative.',
-        'I understand your alternative. Leaving the table is possible, but it is not costless for either side. What makes you prefer agreement to the alternative?']
-    },
-    answerPendingInterests: {
-      ar: ['أشكرك على هذه الإجابة. ما فهمته أن أولويتك هي {interest}. هل أفهم أن {dim} أقل أهمية بالنسبة إليك؟',
-        'إجابتك مفيدة. سأبني عليها: {interest} في المقدمة، ثم {dim}. هل هذا ترتيبك؟'],
-      en: ['Thank you for that answer. What I understand is that your priority is {interest}. May I take it that {dim} is less important to you?',
-        'Your answer is useful. I will build on it: {interest} first, then {dim}. Is that your ordering?']
-    },
-    handleUncertain: {
-      ar: ['لا بأس أن تكون غير حاسم بعد؛ التفاوض لا يفرض يقيناً فورياً. ما الذي ينقصك للحسم: رقم واضح، أم ضمان، أم توضيح من جهتي؟',
-        'أتفهم التردد. لنحوّله إلى سؤال عملي: ما الشرط الذي لو تحقق لقلت «نعم»؟'],
-      en: ['It is acceptable not to be decisive yet; negotiation does not demand immediate certainty. What do you lack in order to decide: a clear number, a safeguard, or a clarification from me?',
-        'I understand the hesitation. Let us turn it into a practical question: what condition, if met, would make you say “yes”?']
-    },
-    handlePartialAccept: {
-      ar: ['أفهم أنك تقبل جزءاً وتتحفظ على {dim}. هذا مسار واقعي؛ لنثبت الجزء المقبول ونفاوض على الباقي.',
-        'القبول الجزئي خطوة ذكية. ما الجزء الذي تقبله بالضبط، وما الجزء الذي تريد تعديله؟'],
-      en: ['I understand that you accept part and reserve judgment on {dim}. That is a realistic path; let us fix the accepted part and negotiate the rest.',
-        'Partial acceptance is a smart step. Which part do you accept exactly, and which part do you want changed?']
-    },
-    handleAnswerPending: {
-      ar: ['أشكرك على إجابتك. سؤالي كان لاختبار وضوح الموقف لا لإحراجك؛ وما فهمته أن {summary}.',
-        'إجابتك تصلح أساساً للحوار. سأربطها بـ{dim}، فإن كان لديك رقم محدد فأذكره.'],
-      en: ['Thank you for your answer. My question was meant to test the clarity of the position, not to embarrass you; what I understood is that {summary}.',
-        'Your answer is a workable basis for dialogue. I will connect it to {dim}; if you have a specific number, state it.']
-    },
-    handleQuestionGeneral: {
-      ar: ['سؤال وجيه. الإجابة المختصرة: {constraint} يحكم قراري، وما دام قائماً فمرونتي محدودة. لكن أخبرني: ما الذي تبحث عنه تحديداً في إجابتي؟',
-        'سؤال في محله. دعني أجبك بشفافية: {constraint}. وهنا سؤالي لك بالمقابل: {ask}'],
-      en: ['A fair question. The short answer: {constraint} governs my decision, and while it stands my flexibility is limited. But tell me: what exactly are you looking for in my answer?',
-        'A good question. Let me answer transparently: {constraint}. And here is my question back: {ask}']
+    vague: {
+      ar: ['لم أستطع تحديد مضمون طلبك من هذه الرسالة. كن محدداً: رقم، شرط، أو سؤال — حتى نتحاور على شيء واضح.',
+        'الرسالة عامة أكثر من اللازم. ما الذي تطلبه تحديداً؟ وما المسوّغ الذي تسند إليه؟'],
+      en: ['I couldn\u2019t pin down the substance of your message. Be specific: a number, a condition, or a question — so we negotiate something clear.',
+        'That message is too general. What exactly are you asking for? And on what justification do you rest it?']
     },
     explorationBeat: {
       ar: ['قبل أن نتمادى في المواقف، دعني أسأل: ما أسوأ سيناريو تتصوره لو لم نتفق؟ أجده مفيداً في ترتيب أولوياتنا.',
@@ -405,12 +228,8 @@
         pendingDeal: null,
         revealedInterests: [],
         askedQuestion: null,
-        lastCounter: null,
-        lastCounterText: '',
-        lastCounterDim: null,
-        pendingQuestion: null   /* {kind, text, dimId} — an unanswered cp question */
+        lastCounter: null
       },
-      dialogue: TDG.initState(),
       outcome: null,
       ended: false, endReason: null,
       rng
@@ -439,12 +258,8 @@
     session.ratings.push(rating);
     session.turns++;
 
-    const frame = TDG.interpret(session, text, a);
-    const cp = session.cp, P = cp.persona, F = session.flags;
-    const pendingBefore = cp.pendingQuestion;
-    const dims = session.scenario.dimensions || [];
-
     /* flags */
+    const F = session.flags;
     if (a.intents.questionInterests) F.askedInterests++;
     if (a.intents.criteria) F.citedCriteria++;
     if (a.intents.option) F.proposedOption++;
@@ -453,7 +268,10 @@
     if (a.intents.paraphrase) F.paraphrased++;
     if (a.questionCount > 0) F.questionsAsked++;
     if (a.intents.concede) F.concessionsByUser++;
-    if (a.intents.offer || Object.keys(frame.proposalValues || {}).length) F.offersByUser++;
+    if (a.intents.offer) F.offersByUser++;
+
+    /* cp dynamics */
+    const cp = session.cp, P = cp.persona;
     if (a.tone.rapport > 0) cp.trust = clamp(cp.trust + 5 * P.rapportSensitivity * a.tone.rapport, 0, 100);
     if (a.intents.questionInterests) cp.trust = clamp(cp.trust + 6 * P.trustGrowth, 0, 100);
     if (a.intents.criteria) cp.trust = clamp(cp.trust + 4 * P.criteriaRespect, 0, 100);
@@ -469,370 +287,229 @@
     if ((session.phase === 'exploration') && (session.flags.offersByUser > 0 || session.flags.proposedOption > 0)) session.phase = 'bargaining';
     if (session.phase === 'bargaining' && (session.turns >= 10 || cp.acceptedDeal)) session.phase = 'closing';
 
-    /* ------- build the counterpart reply ------- */
+    /* ------- build counterpart reply ------- */
     const replies = [];
     let endState = null;
-    const slots = Object.assign(makeSlots(session), TDG.slots(session, frame));
-    const values = frame.proposalValues || {};
-    const hasValues = Object.keys(values).length > 0;
-    const lastProposal = frame.lastProposal;
+    const slots = makeSlots(session);
+    const dims = session.scenario.dimensions || [];
 
-    /* Record the trainee's move before choosing the reply. */
-    TDG.remember(session, frame);
-
-    /* An answer consumes the counterpart's pending question. A new
-       question may be registered after the reply is built. */
-    if (frame.pendingAnswer) cp.pendingQuestion = null;
-
-    function say(tpl, meta) {
-      const m = cpMsg(session, pick(rng, tpl[lang]), slots, meta);
-      replies.push(m);
-      return m;
-    }
-    function setCounter(next, meta) {
-      slots.counter = termsText(session, next, lang);
-      applyPositions(session, next);
-      cp.lastCounter = Object.assign({}, next);
-      cp.lastCounterText = slots.counter;
-      cp.lastCounterDim = salientDimId(session, frame, next);
-      return slots.counter;
-    }
-    function finish(type) {
-      endState = endSession(session, type, a);
+    /* 1. repeated aggression -> counterpart walks */
+    if (F.aggressionStrikes >= 4 && a.tone.aggressive > 0) {
+      replies.push(cpMsg(session, pick(rng, BANK.aggressionFinal[lang]), slots));
+      endState = endSession(session, 'cp_walk', a);
       for (const r of replies) session.messages.push(r);
       return { messages: replies, ended: true, endState, rating, analysis: a };
     }
-    function sealQualitative() {
-      const terms = packageFormula(session) ||
-        (lang === 'ar' ? 'صيغة تفاهم تحفظ مصالح الطرفين معاً' : 'a formula preserving both sides\u2019 interests');
-      cp.acceptedDeal = { values: {}, terms };
-      slots.terms = terms;
-      session.phase = 'closing';
-      say(BANK.acceptOffer, { accepted: true });
-      return finish('agreement');
-    }
 
-    /* 0. repeated aggression: the counterpart leaves the table */
-    if (F.aggressionStrikes >= 4 && a.tone.aggressive > 0) {
-      say(BANK.aggressionFinal);
-      return finish('cp_walk');
-    }
-
-    /* 1. a deal is already on the table and the trainee confirms it */
-    if (cp.acceptedDeal && (frame.acts.close || (frame.acts.accept && !hasValues))) {
-      slots.terms = cp.acceptedDeal.terms || termsText(session, cp.acceptedDeal.values || {}, lang);
-      say(BANK.acceptOffer, { accepted: true, values: cp.acceptedDeal.values || {} });
-      return finish('agreement');
-    }
-
-    /* 2. threats and aggression take precedence over substance */
-    if (frame.acts.threat) {
-      say(BANK.threat);
-      cp.trust = clamp(cp.trust - 8, 0, 100);
-    } else if (a.tone.aggressive > 0) {
-      say(BANK.aggression);
-      hardenPositions(session, 0.1);
-    }
-    /* 3. a concrete numeric proposal or counter-proposal */
-    else if (hasValues) {
-      const ev = evaluateOffer(session, a, rng, values);
+    /* 2. offers carrying numbers -> evaluate against reservation points */
+    if (a.intents.offer && a.numbers.length && dims.length) {
+      const ev = evaluateOffer(session, a, rng);
       if (ev.accepted) {
         const terms = termsText(session, ev.values, lang);
         slots.terms = terms;
         applyPositions(session, ev.values);
-        cp.acceptedDeal = { values: Object.assign({}, ev.values), terms };
+        replies.push(cpMsg(session, pick(rng, BANK.acceptOffer[lang]), slots, { accepted: true, values: ev.values }));
+        cp.acceptedDeal = { values: ev.values, terms };
         session.phase = 'closing';
-        if (frame.condition) {
-          slots.condition = frame.condition;
-          say(BANK.acceptConditional, { accepted: true, values: ev.values });
-        } else {
-          say(BANK.acceptOffer, { accepted: true, values: ev.values });
-        }
-        if (frame.acts.close) return finish('agreement');
       } else if (ev.countered) {
-        setCounter(ev.counter);
-        if (frame.condition) {
-          slots.condition = frame.condition;
-          say(BANK.counterConditional, { counter: ev.counter });
-        } else {
-          say(BANK.counterOffer, { counter: ev.counter });
-        }
+        slots.counter = termsText(session, ev.counter, lang);
+        applyPositions(session, ev.counter);
+        cp.lastCounter = ev.counter;
+        replies.push(cpMsg(session, pick(rng, BANK.counterOffer[lang]), slots, { counter: ev.counter }));
       } else {
-        const revised = ev.revised || currentPositions(session);
+        slots.counter = termsText(session, ev.revised || currentPositions(session), lang);
         if (ev.revised) applyPositions(session, ev.revised);
-        slots.counter = termsText(session, revised, lang);
-        say(BANK.rejectOffer);
+        replies.push(cpMsg(session, pick(rng, BANK.rejectOffer[lang]), slots));
       }
     }
-    /* 4. an option or package proposal (qualitative or pre-numeric).
-       This precedes apology/small-talk because a concrete proposal may
-       legitimately contain an apology as one of its components. */
-    else if (frame.acts.proposeOption && a.intents.offer && !hasValues) {
+    /* 3. a deal is on the table and the trainee accepts/closes -> seal & end */
+    else if (cp.acceptedDeal && (a.intents.closing || a.intents.concede)) {
+      slots.terms = cp.acceptedDeal.terms;
+      replies.push(cpMsg(session, pick(rng, BANK.acceptOffer[lang]), slots, { accepted: true, values: cp.acceptedDeal.values }));
+      endState = endSession(session, 'agreement', a);
+      for (const r of replies) session.messages.push(r);
+      return { messages: replies, ended: true, endState, rating, analysis: a };
+    }
+    /* 4. aggression / threats */
+    else if (a.tone.aggressive > 0) {
+      replies.push(cpMsg(session, pick(rng, BANK.aggression[lang]), slots));
+      hardenPositions(session, 0.1);
+    } else if (a.intents.threat) {
+      replies.push(cpMsg(session, pick(rng, BANK.threat[lang]), slots));
+      cp.trust = clamp(cp.trust - 8, 0, 100);
+    }
+    /* 5. questions about interests */
+    else if (a.intents.questionInterests) {
+      const reveal = nextInterest(session);
+      if (reveal) {
+        slots.interest = L(reveal.text, lang);
+        cp.revealedInterests.push(reveal.id);
+        replies.push(cpMsg(session, pick(rng, BANK.revealInterest[lang]), slots, { revealed: reveal.id }));
+      } else {
+        slots.ask = pick(rng, CPQ[lang]);
+        cp.askedQuestion = 'generic';
+        F.counterpartQuestionsAsked++;
+        replies.push(cpMsg(session, pick(rng, BANK.answerQuestion[lang]), slots));
+      }
+    }
+    /* 6. criteria cited */
+    else if (a.intents.criteria) {
+      replies.push(cpMsg(session, pick(rng, BANK.criteriaRespect[lang]), slots));
+      softenPositions(session, 0.12 * P.criteriaRespect);
+    }
+    /* 7. qualitative option/package proposal */
+    else if (a.intents.option && !a.intents.batna && !a.intents.questionInterests && !a.intents.criteria
+             && !(a.intents.question && a.isShort)) {
       const pk = matchPackage(session, a.raw);
       if (pk && pk.fit >= 2) {
-        if (F.packagesMatched.indexOf(pk.id) === -1) F.packagesMatched.push(pk.id);
+        F.packagesMatched.push(pk.id);
         slots.packLabel = L(pk.label, lang);
-        say(BANK.optionEnthusiastic, { package: pk.id });
+        replies.push(cpMsg(session, pick(rng, BANK.optionEnthusiastic[lang]), slots, { package: pk.id }));
+        /* a strong package moves counterpart toward their floor */
         softenPositions(session, 0.3);
       } else if (pk && pk.fit === 1) {
         slots.packLabel = pk ? L(pk.label, lang) : (lang === 'ar' ? 'الفكرة' : 'the idea');
-        say(BANK.optionPartial);
+        replies.push(cpMsg(session, pick(rng, BANK.optionPartial[lang]), slots));
       } else {
-        say(BANK.optionReject);
+        replies.push(cpMsg(session, pick(rng, BANK.optionReject[lang]), slots));
       }
     }
-    /* 5. a condition attached to acceptance or rejection, without numbers */
-    else if (frame.condition) {
-      slots.condition = frame.condition;
-      if (dims.length) {
-        softenPositions(session, 0.08);
-        setCounter(currentPositions(session));
-      } else {
-        slots.counter = packageFormula(session) ||
-          (lang === 'ar' ? 'التزام مكتوب بخطوات محددة' : 'a written commitment with defined steps');
-      }
-      say(BANK.counterConditional);
-    }
-    /* 6. explicit acceptance of the last counter on the table, or of a
-       qualitative package formula in a scenario without dimensions */
-    else if (frame.acts.accept) {
-      if (cp.lastCounter || (lastProposal && lastProposal.kind === 'counter')) {
-        const deal = cp.lastCounter || (lastProposal && lastProposal.values) || null;
-        if (deal) {
-          const terms = cp.lastCounterText || termsText(session, deal, lang);
-          slots.terms = terms;
-          applyPositions(session, deal);
-          cp.acceptedDeal = { values: Object.assign({}, deal), terms };
-          session.phase = 'closing';
-          say(BANK.acceptOffer, { accepted: true, values: deal });
-          return finish('agreement');
-        }
-      }
-      if (!dims.length && F.packagesMatched.length) return sealQualitative();
-      say(BANK.handleAgreementNoDeal);
-    }
-    /* 7. rejection without a new proposal */
-    else if (frame.acts.reject) {
-      if (frame.wordCount <= 7) say(BANK.handleRejectionShort);
-      else say(BANK.handleRejection);
-    }
-    /* 8. an announced change of position without a new number */
-    else if (frame.acts.mindChange) {
-      say(BANK.handleMindChangeGeneral);
-    }
-    /* 9. an objection or reservation */
-    else if (frame.acts.object) {
-      say(BANK.handleObjection);
-    }
-    /* 10. deferral, uncertainty, apology or small talk */
-    else if (frame.acts.defer) {
-      say(BANK.handleDefer);
-    } else if (frame.acts.uncertain) {
-      say(BANK.handleUncertain);
-    } else if (frame.acts.apology) {
-      say(BANK.handleApology);
-    } else if (frame.acts.smalltalk) {
-      say(BANK.handleSmalltalk);
-    }
-    /* 11. questions, answered from the current state */
-    else if (frame.questionKind) {
-      const qk = frame.questionKind;
-      if (qk === 'interests') {
-        const reveal = nextInterest(session);
-        if (reveal) {
-          slots.interest = L(reveal.text, lang);
-          cp.revealedInterests.push(reveal.id);
-          say(BANK.revealInterest, { revealed: reveal.id });
-        } else {
-          slots.ask = contextQuestion(session, frame);
-          cp.askedQuestion = 'interests';
-          say(BANK.answerQuestion);
-        }
-      } else if (qk === 'clarify') {
-        slots.explanation = TDG.explainState(session, frame);
-        say(BANK.handleConfusion);
-      } else if (qk === 'why') {
-        say(BANK.handleQuestionWhy);
-      } else if (qk === 'how') {
-        say(BANK.handleQuestionHow);
-      } else if (qk === 'when') {
-        say(BANK.handleQuestionWhen);
-      } else if (qk === 'batna') {
-        cp.askedQuestion = 'batna';
-        say(BANK.batnaProbe);
-      } else if (qk === 'unrelated') {
-        slots.answer = TDG.answerOffTopic(session, frame);
-        say(BANK.handleUnrelated);
-      } else if (qk === 'terms') {
-        say(BANK.handleQuestionTerms);
-      } else {
-        slots.ask = contextQuestion(session, frame);
-        cp.askedQuestion = 'generic';
-        say(BANK.handleQuestionGeneral);
-      }
-    }
-    /* 12. objective criteria */
-    else if (frame.acts.citeCriteria) {
-      say(BANK.criteriaRespect);
-      softenPositions(session, 0.12 * P.criteriaRespect);
-    }
-    /* 13. BATNA stated calmly */
-    else if (frame.acts.stateBatna) {
-      say(BANK.batnaStated);
+    /* 8. BATNA stated calmly (as a statement, not a question) */
+    else if (a.intents.batna && !a.intents.question) {
+      replies.push(cpMsg(session, pick(rng, BANK.batnaStated[lang]), slots));
       softenPositions(session, 0.15);
     }
-    /* 14. an explanation of motives or constraints */
-    else if (frame.acts.explain) {
-      say(BANK.acknowledgeExplanation);
-      softenPositions(session, 0.08);
-    }
-    /* 15. an interest statement rather than a position */
-    else if (a.intents.mentionInterests) {
-      say(BANK.handleInterestStatement);
-    }
-    /* 16. facilitation, agenda or paraphrase */
-    else if (frame.acts.facilitate || frame.acts.summarize) {
-      say(BANK.facilitation);
-    }
-    /* 17. a concession without a number: reciprocate with a counter */
-    else if (frame.acts.concede && !frame.acts.accept) {
-      if (dims.length) {
-        softenPositions(session, 0.2);
-        setCounter(currentPositions(session));
+    /* 9. questions */
+    else if (a.intents.question && !a.intents.paraphrase) {
+      if (a.intents.batna) {
+        replies.push(cpMsg(session, pick(rng, BANK.batnaProbe[lang]), slots));
+        cp.askedQuestion = 'batna';
       } else {
-        slots.counter = packageFormula(session) ||
-          (lang === 'ar' ? 'التزام مكتوب بخطوات محددة' : 'a written commitment with defined steps');
+        const rev = nextInterest(session);
+        if (rev && cp.trust > 65 && rng() > 0.5) {
+          slots.interest = L(rev.text, lang);
+          cp.revealedInterests.push(rev.id);
+          replies.push(cpMsg(session, pick(rng, BANK.revealInterest[lang]), slots));
+        } else {
+          slots.ask = pick(rng, CPQ[lang]);
+          replies.push(cpMsg(session, pick(rng, BANK.answerQuestion[lang]), slots));
+          cp.askedQuestion = 'generic';
+          F.counterpartQuestionsAsked++;
+        }
       }
-      say(BANK.cpProposal);
     }
-    /* 18. greeting or thanks (after questions, so a greeting with a
-       question still gets the question answered) */
-    else if (frame.acts.greeting) {
-      say(BANK.greeting);
-    } else if (frame.acts.thanks) {
-      say(BANK.rapport);
+    /* 10. rapport */
+    else if (a.tone.rapport > 0 && !a.substantive) {
+      replies.push(cpMsg(session, pick(rng, BANK.rapport[lang]), slots));
     }
-    /* 19. walking away or closing without a formula */
-    else if (frame.acts.walkaway) {
-      say(BANK.walkaway);
-      return finish('walkaway');
-    } else if (frame.acts.close) {
-      if (!dims.length && F.packagesMatched.length) return sealQualitative();
-      say(BANK.closingNoDeal);
+    /* 11. facilitation / agenda / paraphrase */
+    else if (a.intents.agenda || a.intents.paraphrase) {
+      replies.push(cpMsg(session, pick(rng, BANK.facilitation[lang]), slots));
     }
-    /* 20. contextual clarification instead of a generic error */
-    else if (frame.pendingAnswer) {
-      say(BANK.handleAnswerPending);
-    } else {
-      const kind = TDG.clarifyKind(session, frame);
-      say(BANK[kind]);
+    /* 12. closing / conceding intent */
+    else if ((a.intents.closing || a.intents.concede) && !cp.acceptedDeal) {
+      if (cp.lastCounter) {
+        /* accept the counterpart's last counter as the deal */
+        slots.counter = termsText(session, cp.lastCounter, lang);
+        applyPositions(session, cp.lastCounter);
+        cp.acceptedDeal = { values: { ...cp.lastCounter }, terms: slots.counter };
+        slots.terms = slots.counter;
+        replies.push(cpMsg(session, pick(rng, BANK.acceptOffer[lang]), slots, { accepted: true, values: cp.lastCounter }));
+        session.phase = 'closing';
+      } else if (!dims.length && (cp.trust >= 55 || F.packagesMatched.length >= 1)) {
+        /* qualitative scenario: build the deal from the matched packages */
+        const labels = (session.scenario.packages || [])
+          .filter(p => F.packagesMatched.includes(p.id))
+          .map(p => L(p.label, lang));
+        const terms = labels.length
+          ? labels.join(lang === 'ar' ? '؛ ' : '; ')
+          : (lang === 'ar' ? 'صيغة تفاهم تحفظ مصالح الطرفين معاً' : 'a formula preserving both sides\u2019 interests');
+        cp.acceptedDeal = { values: {}, terms };
+        slots.terms = terms;
+        replies.push(cpMsg(session, pick(rng, BANK.acceptOffer[lang]), slots, { accepted: true }));
+        session.phase = 'closing';
+      } else {
+        replies.push(cpMsg(session, pick(rng, BANK.closingNoDeal[lang]), slots));
+      }
+      /* an explicit closing intent with a deal on the table ends the session */
+      if (cp.acceptedDeal && a.intents.closing) {
+        endState = endSession(session, 'agreement', a);
+        for (const r of replies) session.messages.push(r);
+        return { messages: replies, ended: true, endState, rating, analysis: a };
+      }
+    }
+    /* 13. concession by user */
+    else if (a.intents.concede) {
+      /* user conceding softens counterpart (reciprocity) */
+      softenPositions(session, 0.2);
+      slots.counter = termsText(session, currentPositions(session), lang);
+      replies.push(cpMsg(session, pick(rng, BANK.cpProposal[lang]), slots));
+      cp.lastCounter = currentPositions(session);
+    }
+    /* 14. vague */
+    else if (a.vague) {
+      replies.push(cpMsg(session, pick(rng, BANK.vague[lang]), slots));
+    }
+    /* 15. progression beats */
+    else {
+      if (session.turns === 2 || session.turns === 3) {
+        replies.push(cpMsg(session, pick(rng, BANK.explorationBeat[lang]), slots));
+      } else if (session.phase === 'bargaining' && rng() < 0.5) {
+        softenPositions(session, 0.1);
+        slots.counter = termsText(session, currentPositions(session), lang);
+        replies.push(cpMsg(session, pick(rng, BANK.cpProposal[lang]), slots));
+        cp.lastCounter = currentPositions(session);
+      } else {
+        slots.ask = pick(rng, CPQ[lang]);
+        replies.push(cpMsg(session, pick(rng, BANK.answerQuestion[lang]), slots));
+        F.counterpartQuestionsAsked++;
+      }
     }
 
-    /* Remember the counterpart's latest question so the next turn can
-       answer it, and so clarification can refer back to it. */
-    if (!endState) registerPending(session, replies, frame);
+    /* occasional counterpart follow-up question (tests listening/prep) */
+    if (!endState && !cp.acceptedDeal && rng() < 0.22 && session.phase !== 'closing') {
+      const q = pick(rng, CPQ[lang]);
+      const m2 = cpMsg(session, q, slots);
+      m2.meta.followUp = true;
+      m2.text = (lang === 'ar' ? 'وسؤال من طرفي: ' : 'And a question from my side: ') + q;
+      replies.push(m2);
+      cp.askedQuestion = 'followup';
+      F.counterpartQuestionsAsked++;
+    }
 
     /* round cap: present the final formula exactly once */
     if (!endState && !cp.acceptedDeal && session.turns >= session.maxTurns && !session.capped) {
       session.capped = true;
-      if (dims.length) {
-        setCounter(finalOfferPositions(session));
-      } else {
-        slots.counter = packageFormula(session) ||
-          (lang === 'ar' ? 'صيغة تفاهم نهائية تحفظ مصالح الطرفين' : 'a final formula preserving both sides\u2019 interests');
-        cp.lastCounterText = slots.counter;
-      }
-      say(BANK.finalOffer, { final: true });
+      const finalPos = finalOfferPositions(session);
+      slots.counter = termsText(session, finalPos, lang);
+      applyPositions(session, finalPos);
+      cp.lastCounter = finalPos;
+      replies.push(cpMsg(session, pick(rng, BANK.finalOffer[lang]), slots, { final: true }));
       session.phase = 'closing';
     }
 
     /* hard stop one grace message past the cap */
     if (!endState && session.turns > session.maxTurns + 1) {
       if (cp.acceptedDeal) {
-        slots.terms = cp.acceptedDeal.terms || termsText(session, cp.acceptedDeal.values || {}, lang);
-        say(BANK.acceptOffer, { accepted: true, values: cp.acceptedDeal.values || {} });
-        return finish('agreement');
+        slots.terms = cp.acceptedDeal.terms;
+        replies.push(cpMsg(session, pick(rng, BANK.acceptOffer[lang]), slots, { accepted: true, values: cp.acceptedDeal.values }));
+        endState = endSession(session, 'agreement', a);
+      } else {
+        replies.push(cpMsg(session, pick(rng, BANK.timeout[lang]), slots));
+        endState = endSession(session, 'timeout', a);
       }
-      say(BANK.timeout);
-      return finish('timeout');
+      for (const r of replies) session.messages.push(r);
+      return { messages: replies, ended: true, endState, rating, analysis: a };
     }
 
     for (const r of replies) session.messages.push(r);
     return { messages: replies, ended: false, endState: null, rating, analysis: a };
   }
 
-  /* ---------- context helpers used by the reply planner ---------- */
-  function lastQuestion(text) {
-    const parts = String(text || '').match(/[^?؟]*[?؟]/g);
-    if (!parts || !parts.length) return '';
-    return parts[parts.length - 1].replace(/^[\s،,;:]+/, '').trim().slice(0, 240);
-  }
-
-  function salientDimId(session, frame, values) {
-    const keys = Object.keys(values || {});
-    if (!keys.length) return null;
-    if (frame && frame.target && frame.target.dimId && keys.indexOf(frame.target.dimId) !== -1) return frame.target.dimId;
-    if (frame && frame.topics) {
-      const t = frame.topics.find(id => keys.indexOf(id) !== -1);
-      if (t) return t;
-    }
-    return keys[0];
-  }
-
-  function contextQuestion(session, frame) {
-    const lang = session.lang;
-    const dims = session.scenario.dimensions || [];
-    const dim = (frame && frame.stickingDim) || dims[0] || null;
-    const label = dim ? L(dim.label, lang) : (lang === 'ar' ? 'البند المطروح' : 'the item on the table');
-    const dimA = dims[0] ? L(dims[0].label, lang) : label;
-    const dimB = dims[1] ? L(dims[1].label, lang) : label;
-
-    if (session.cp.pendingQuestion && session.cp.pendingQuestion.text) {
-      return lang === 'ar'
-        ? 'لنعد إلى سؤالي السابق: ' + session.cp.pendingQuestion.text
-        : 'Let us return to my earlier question: ' + session.cp.pendingQuestion.text;
-    }
-    if (session.cp.lastCounterText) {
-      return lang === 'ar'
-        ? `ما الذي ينقص الصيغة المطروحة من وجهة نظرك: القيمة على ${label} أم الضمانات المصاحبة؟`
-        : `What is missing from the formula on the table in your view: the value on ${label} or the accompanying safeguards?`;
-    }
-    if (dims.length > 1) {
-      return lang === 'ar'
-        ? `ما البند الذي تريد أن نبدأ به: ${dimA} أم ${dimB}؟`
-        : `Which item would you like us to begin with: ${dimA} or ${dimB}?`;
-    }
-    return lang === 'ar'
-      ? `ما الخطوة العملية التي تقترحها الآن بخصوص ${label}؟`
-      : `What practical step do you propose now regarding ${label}?`;
-  }
-
-  function registerPending(session, replies, frame) {
-    for (let i = replies.length - 1; i >= 0; i--) {
-      const q = lastQuestion(replies[i].text);
-      if (!q) continue;
-      const dimId = (frame && frame.target && frame.target.dimId) ||
-        session.cp.lastCounterDim ||
-        (frame && frame.stickingDim && frame.stickingDim.id) || null;
-      const previous = session.cp.pendingQuestion && session.cp.pendingQuestion.text;
-      session.cp.pendingQuestion = { kind: 'context', text: q, dimId };
-      if (previous !== q) session.flags.counterpartQuestionsAsked++;
-      return;
-    }
-  }
-
   /* ============ offer evaluation ============ */
-  function evaluateOffer(session, a, rng, explicitMap) {
+  function evaluateOffer(session, a, rng) {
     const dims = session.scenario.dimensions || [];
-    let explicit;   /* Map dimId -> value */
-    if (explicitMap && Object.keys(explicitMap).length) {
-      explicit = new Map();
-      for (const k of Object.keys(explicitMap)) {
-        if (isFinite(explicitMap[k])) explicit.set(k, explicitMap[k]);
-      }
-    } else {
-      explicit = mapNumbersToDims(session, a);
-    }
+    const explicit = mapNumbersToDims(session, a);   /* Map dimId -> value */
     const vals = {};
     for (const d of dims) vals[d.id] = explicit.has(d.id) ? explicit.get(d.id) : session.cp.position[d.id];
 
@@ -993,15 +670,6 @@
         : `${lbl}: ${v}${d.unit ? ' ' + unitEn(d.unit, v) : ''}`);
     }
     return parts.join(lang === 'ar' ? '، ' : '; ');
-  }
-  /* Textual formula assembled from the qualitative packages the trainee
-     and the counterpart have already matched (scenarios without dimensions). */
-  function packageFormula(session) {
-    const matched = (session.flags && session.flags.packagesMatched) || [];
-    const labels = (session.scenario.packages || [])
-      .filter(p => matched.indexOf(p.id) !== -1)
-      .map(p => L(p.label, session.lang));
-    return labels.join(session.lang === 'ar' ? '؛ ' : '; ');
   }
   function unitAr(u, v) {
     v = Number(v) || 0;

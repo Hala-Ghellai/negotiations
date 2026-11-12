@@ -20,6 +20,7 @@
   /* ================= boot ================= */
   function boot() {
     applyLang();
+    document.addEventListener('click', guardDisabledLinks);
     window.addEventListener('hashchange', route);
     route();
     if (!DATA.settings.onboarded) setTimeout(showOnboarding, 400);
@@ -33,9 +34,51 @@
     document.title = t('docTitle');
     /* static chrome (header/footer) carries data-i18n hooks */
     $$('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
+    syncDisabledNav();
   }
 
   /* ================= router ================= */
+  /* Temporarily disabled pages. Remove an entry to fully re-enable that page
+     and its navigation link; views, routes and data stay untouched. */
+  const DISABLED_ROUTES = ['dashboard', 'learn'];
+
+  function routeNameFromHash(hash) {
+    const m = String(hash || '').match(/^#\/([a-z0-9_-]+)/i);
+    return m ? m[1].toLowerCase() : '';
+  }
+  function isDisabledRoute(name) {
+    return DISABLED_ROUTES.indexOf(String(name || '').toLowerCase()) !== -1;
+  }
+  function isDisabledHash(hash) {
+    return isDisabledRoute(routeNameFromHash(hash));
+  }
+  function comingSoon() { toast(t('coming_soon')); }
+
+  function syncDisabledNav() {
+    $$('.nav-link').forEach(a => {
+      const off = isDisabledRoute(a.dataset.nav);
+      a.classList.toggle('nav-disabled', off);
+      if (off) {
+        a.setAttribute('aria-disabled', 'true');
+        a.title = t('coming_soon');
+      } else {
+        a.removeAttribute('aria-disabled');
+        a.removeAttribute('title');
+      }
+    });
+  }
+
+  /* Any link to a disabled page is intercepted: no navigation, just a toast. */
+  function guardDisabledLinks(e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (isDisabledHash(href) || isDisabledRoute(a.dataset.nav)) {
+      e.preventDefault();
+      comingSoon();
+    }
+  }
+
   const routes = [
     { re: /^#?\/?$/, view: viewHome, nav: 'home' },
     { re: /^#\/learn$/, view: viewLearn, nav: 'learn' },
@@ -64,6 +107,11 @@
 
   function route() {
     const hash = location.hash || '#/';
+    if (isDisabledHash(hash)) {
+      comingSoon();
+      location.hash = '#/';
+      return;
+    }
     clearSessionTimers();
     for (const r of routes) {
       const m = hash.match(r.re);
@@ -86,7 +134,10 @@
     $$('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.nav === nav));
   }
 
-  function go(hash) { location.hash = hash; }
+  function go(hash) {
+    if (isDisabledHash(hash)) { comingSoon(); return; }
+    location.hash = hash;
+  }
 
   /* ================= shared UI ================= */
   function container(...children) { return el('div', { class: 'container' }, ...children); }
@@ -118,12 +169,23 @@
     const hero = el('section', { class: 'hero' },
       el('div', { class: 'container hero-grid' },
         el('div', { class: 'hero-copy' },
-          el('span', { class: 'hero-badge' }, t('hero_badge')),
-          el('h1', null, t('hero_title')),
+          el('span', { class: 'hero-eyebrow' }, t('hero_badge')),
+          el('h1', { class: 'hero-title' },
+            t('hero_title_1') + ' ',
+            el('span', { class: 'hero-hl' }, t('hero_title_hl')),
+            ' ' + t('hero_title_2')),
           el('p', { class: 'hero-sub' }, t('hero_sub')),
           el('div', { class: 'hero-cta' },
-            el('a', { class: 'btn btn-gold btn-lg', href: DATA.settings.onboarded ? '#/diagnostic' : '#', onclick: e => { e.preventDefault(); if (!DATA.settings.onboarded) showOnboarding(); else go('#/diagnostic'); } }, icon('compass', 18), t('hero_cta')),
-            el('a', { class: 'btn btn-ghost btn-lg', href: '#/simulate' }, icon('flask', 18), t('hero_cta2')))),
+            el('a', {
+              class: 'btn btn-primary btn-lg hero-btn-primary',
+              href: DATA.settings.onboarded ? '#/diagnostic' : '#',
+              onclick: e => { e.preventDefault(); if (!DATA.settings.onboarded) showOnboarding(); else go('#/diagnostic'); }
+            }, icon('compass', 18), t('hero_cta')),
+            el('a', { class: 'btn btn-lg hero-btn-ghost', href: '#/simulate' }, icon('flask', 18), t('hero_cta2'))),
+          el('ul', { class: 'hero-trust' },
+            heroTrust('flask', t('hero_trust_1')),
+            heroTrust('gauge', t('hero_trust_2')),
+            heroTrust('doc', t('hero_trust_3')))),
         el('div', { class: 'hero-art' },
           el('div', { class: 'hero-chat' },
             chatDemo()))));
@@ -197,10 +259,17 @@
       el('b', null, title), el('p', null, desc));
   }
   function compCard(ic, title, desc, href) {
-    return el('a', { class: 'card comp-card', href },
+    const off = isDisabledHash(href);
+    return el('a', { class: 'card comp-card' + (off ? ' is-disabled' : ''), href, 'aria-disabled': off ? 'true' : null },
       el('div', { class: 'wc-icon', html: icon(ic, 22) }),
       el('b', null, title), el('p', null, desc),
       el('span', { class: 'cc-arrow', html: icon('arrowRight', 16) }));
+  }
+
+  function heroTrust(iconName, label) {
+    return el('li', null,
+      el('span', { class: 'ht-icon', html: icon(iconName, 16) }),
+      el('span', null, label));
   }
 
   function chatDemo() {
@@ -231,10 +300,11 @@
 
     if (DATA.diagnostic && !hashQuery().retake) {
       main.append(container(
-        pageHead(t('diag_title'), t('diag_sub'), 'compass'),
-        resultCard(DATA.diagnostic, true),
-        el('div', { class: 'center-row' },
-          el('button', { class: 'btn btn-ghost', onclick: () => { location.hash = '#/diagnostic?retake=1'; } }, icon('refresh', 16), t('diag_restart')))));
+        el('div', { class: 'diag-shell wide' },
+          pageHead(t('diag_title'), t('diag_sub'), 'compass'),
+          resultCard(DATA.diagnostic, true),
+          el('div', { class: 'center-row' },
+            el('button', { class: 'btn btn-ghost', onclick: () => { location.hash = '#/diagnostic?retake=1'; } }, icon('refresh', 16), t('diag_restart'))))));
       return;
     }
 
@@ -272,13 +342,14 @@
       DATA.diagnostic = { date: TF.todayISO(), style: res.dominant, secondary: res.secondary, scores: res.scores, answers };
       persist();
       main.innerHTML = '';
-      main.append(container(pageHead(t('diag_title'), t('diag_sub'), 'compass'),
-        resultCard(DATA.diagnostic, false)));
+      main.append(container(el('div', { class: 'diag-shell wide' },
+        pageHead(t('diag_title'), t('diag_sub'), 'compass'),
+        resultCard(DATA.diagnostic, false))));
       toast(t('diag_saved'), 'ok');
     }
 
     renderQ();
-    main.append(container(head, card));
+    main.append(container(el('div', { class: 'diag-shell' }, head, card)));
   }
 
   function resultCard(diag, showRestartBtn) {

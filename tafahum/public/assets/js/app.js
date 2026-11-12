@@ -116,12 +116,52 @@
   }
 
   /* ================= boot ================= */
+  /* Temporarily disabled pages. Remove an entry to fully re-enable that page
+     and its navigation link; views, routes and data stay untouched. */
+  const DISABLED_ROUTES = ['dashboard', 'learn'];
+
+  function isDisabledRoute(name) {
+    return DISABLED_ROUTES.indexOf(String(name || '').toLowerCase()) !== -1;
+  }
+  function isDisabledPath(path) {
+    const p = String(path || '').split('?')[0].replace(/\/+$/, '') || '/';
+    return isDisabledRoute(p.replace(/^\//, ''));
+  }
+  function comingSoon() { toast(t('coming_soon')); }
+
+  function syncDisabledNav() {
+    $$('.nav-link').forEach(a => {
+      const off = isDisabledRoute(a.dataset.nav);
+      a.classList.toggle('nav-disabled', off);
+      if (off) {
+        a.setAttribute('aria-disabled', 'true');
+        a.title = t('coming_soon');
+      } else {
+        a.removeAttribute('aria-disabled');
+        a.removeAttribute('title');
+      }
+    });
+  }
+
+  /* Any link to a disabled page is intercepted: no navigation, just a toast. */
+  function guardDisabledLinks(e) {
+    const a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+    if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (isDisabledPath(href) || isDisabledRoute(a.dataset.nav)) {
+      e.preventDefault();
+      comingSoon();
+    }
+  }
+
   let booted = false;
   function boot() {
     if (booted) return;
     booted = true;
     DATA.settings.lang = LANG;
+    document.addEventListener('click', guardDisabledLinks);
     window.addEventListener('popstate', render);
+    syncDisabledNav();
     syncFromServer().then(() => {
       render();
       if (!DATA.settings.onboarded) setTimeout(showOnboarding, 400);
@@ -153,7 +193,13 @@
   function render() {
     clearSessionTimers();
     const r = currentRoute();
+    if (isDisabledRoute(r.view)) {
+      comingSoon();
+      history.replaceState({}, '', '/');
+      return render();
+    }
     setNav(r.view === 'session' ? 'simulate' : r.view === 'report' ? 'dashboard' : r.view);
+    syncDisabledNav();
     const main = $('#view');
     main.innerHTML = '';
     window.scrollTo(0, 0);
@@ -178,6 +224,7 @@
   /* In-memory flows (picker → session → report) stay on pushState so
      liveSession survives; everything else is a normal page load. */
   function nav(path) {
+    if (isDisabledPath(path)) { comingSoon(); return; }
     if (path === '/session' || path.indexOf('/report/') === 0) {
       if (location.pathname !== path) history.pushState({}, '', path);
       render();
@@ -216,17 +263,24 @@
     const hero = el('section', { class: 'hero' },
       el('div', { class: 'container hero-grid' },
         el('div', { class: 'hero-copy' },
-          el('span', { class: 'hero-badge' }, t('hero_badge')),
-          el('h1', null, t('hero_title')),
+          el('span', { class: 'hero-eyebrow' }, t('hero_badge')),
+          el('h1', { class: 'hero-title' },
+            t('hero_title_1') + ' ',
+            el('span', { class: 'hero-hl' }, t('hero_title_hl')),
+            ' ' + t('hero_title_2')),
           el('p', { class: 'hero-sub' }, t('hero_sub')),
           el('div', { class: 'hero-cta' },
             el('a', {
-              class: 'btn btn-gold btn-lg', href: '/diagnostic', onclick: e => {
+              class: 'btn btn-primary btn-lg hero-btn-primary', href: '/diagnostic', onclick: e => {
                 e.preventDefault();
                 if (!DATA.settings.onboarded) showOnboarding(); else location.href = '/diagnostic';
               }
             }, icon('compass', 18), t('hero_cta')),
-            el('a', { class: 'btn btn-ghost btn-lg', href: '/simulate' }, icon('flask', 18), t('hero_cta2')))),
+            el('a', { class: 'btn btn-lg hero-btn-ghost', href: '/simulate' }, icon('flask', 18), t('hero_cta2'))),
+          el('ul', { class: 'hero-trust' },
+            heroTrust('flask', t('hero_trust_1')),
+            heroTrust('gauge', t('hero_trust_2')),
+            heroTrust('doc', t('hero_trust_3')))),
         el('div', { class: 'hero-art' },
           el('div', { class: 'hero-chat' },
             chatDemo()))));
@@ -300,10 +354,17 @@
       el('b', null, title), el('p', null, desc));
   }
   function compCard(ic, title, desc, href) {
-    return el('a', { class: 'card comp-card', href },
+    const off = isDisabledPath(href);
+    return el('a', { class: 'card comp-card' + (off ? ' is-disabled' : ''), href, 'aria-disabled': off ? 'true' : null },
       el('div', { class: 'wc-icon', html: icon(ic, 22) }),
       el('b', null, title), el('p', null, desc),
       el('span', { class: 'cc-arrow', html: icon('arrowRight', 16) }));
+  }
+
+  function heroTrust(iconName, label) {
+    return el('li', null,
+      el('span', { class: 'ht-icon', html: icon(iconName, 16) }),
+      el('span', null, label));
   }
 
   function chatDemo() {
@@ -334,8 +395,9 @@
 
     if (DATA.diagnostic && !urlParam('retake')) {
       main.append(container(
-        pageHead(t('diag_title'), t('diag_sub'), 'compass'),
-        resultCard(DATA.diagnostic, true)));
+        el('div', { class: 'diag-shell wide' },
+          pageHead(t('diag_title'), t('diag_sub'), 'compass'),
+          resultCard(DATA.diagnostic, true))));
       return;
     }
 
@@ -375,13 +437,14 @@
       /* store server-side (scores object keyed by style name) */
       apiTry('POST', '/api/diagnostic', { token: TOKEN, style: res.dominant, scores: res.scores });
       main.innerHTML = '';
-      main.append(container(pageHead(t('diag_title'), t('diag_sub'), 'compass'),
-        resultCard(DATA.diagnostic, false)));
+      main.append(container(el('div', { class: 'diag-shell wide' },
+        pageHead(t('diag_title'), t('diag_sub'), 'compass'),
+        resultCard(DATA.diagnostic, false))));
       toast(t('diag_saved'), 'ok');
     }
 
     renderQ();
-    main.append(container(head, card));
+    main.append(container(el('div', { class: 'diag-shell' }, head, card)));
   }
 
   function resultCard(diag, showRestartBtn) {
