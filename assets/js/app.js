@@ -1066,7 +1066,7 @@
     const modal = el('div', { class: 'modal-back' });
     const nameInput = el('input', { class: 'input', placeholder: t('ob_name_ph'), value: DATA.settings.name || '' });
     const box = el('div', { class: 'modal ob-modal' },
-      el('div', { class: 'ob-hero' }, logoSVG(46),
+      el('div', { class: 'ob-hero' }, el('span', { class: 'ob-logo', html: logoSVG(46) }),
         el('h2', null, t('ob_title')),
         el('p', { class: 'muted' }, t('ob_intro'))),
       el('div', { class: 'modal-body' },
