@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Diagnostic;
 use App\Models\ProgressRead;
 use App\Models\Trainee;
+use App\Models\TrainingSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,12 +27,29 @@ class TraineeController extends Controller
             'onboarded' => ['sometimes', 'boolean'],
         ]);
 
-        $trainee = Trainee::updateOrCreate(
-            ['token' => $data['token']],
-            collect($data)->only(['name', 'lang', 'coach_on', 'onboarded'])
-                ->merge(['token' => $data['token']])
-                ->toArray()
-        );
+        $trainee = Trainee::firstOrNew(['token' => $data['token']]);
+
+        // Only touch fields that were actually supplied so a lightweight
+        // bootstrap call never resets a trainee's saved settings.
+        if (array_key_exists('name', $data)) {
+            $trainee->name = (string) ($data['name'] ?? '');
+        }
+
+        if (array_key_exists('lang', $data)) {
+            $trainee->lang = $data['lang'];
+        }
+
+        if (array_key_exists('coachOn', $data)) {
+            $trainee->coach_on = (bool) $data['coachOn'];
+        }
+
+        if (array_key_exists('onboarded', $data)) {
+            $trainee->onboarded = (bool) $data['onboarded'];
+        }
+
+        $trainee->save();
+        // Load database defaults (name/lang/coach_on/onboarded) for new rows.
+        $trainee->refresh();
 
         $diagnostic = Diagnostic::where('trainee_token', $trainee->token)
             ->latest()->first();

@@ -132,6 +132,8 @@
     ses_you: 'أنت', ses_cp: 'الطرف الآخر',
     coach_label: 'الموجّه', coach_on: 'التوجيه مفعّل', coach_off: 'وضع التقييم الصامت',
     coach_toggle_hint: 'أوقف التوجيه إن أردت تقييماً واقعياً دون مساعدات.',
+    coach_empty: 'ستظهر هنا ملاحظة إرشادية بعد كل رسالة، من دون أن تقاطع سير الحوار.',
+    coach_hidden: 'التوجيه متوقف: وضع التقييم الصامت.',
     composer_ph: 'اكتب رسالتك التفاوضية... (أو استخدم الاقتراحات)',
     composer_send: 'إرسال', composer_hint: 'تلميح',
     typing: 'يكتب الآن...',
@@ -195,7 +197,7 @@
 
     /* settings */
     set_title: 'الإعدادات', set_name: 'الاسم', set_coach: 'التوجيه أثناء المحاكاة',
-    set_coach_d: 'ملاحظات الموجّه تظهر بعد كل رسالة لتوجهك فورياً. أوقفه لوضع تقييم صامت.',
+    set_coach_d: 'تظهر ملاحظات الموجّه في اللوحة الجانبية من دون مقاطعة سير الحوار. أوقفه لوضع تقييم صامت.',
     set_lang: 'اللغة', set_about: 'عن المنصة',
     set_about_d: 'تفاهم منصة تدريب على التفاوض وإدارة الحوار مبنية على مقترح بحثي يستند إلى التفاوض القائم على المبادئ (Fisher & Ury) ونموذج توماس–كيلمان لأساليب إدارة الخلاف.',
 
@@ -323,6 +325,8 @@
     ses_you: 'You', ses_cp: 'Other party',
     coach_label: 'Coach', coach_on: 'Coaching on', coach_off: 'Silent assessment mode',
     coach_toggle_hint: 'Turn coaching off for a realistic assessment without assistance.',
+    coach_empty: 'A guidance note will appear here after each message, without interrupting the conversation.',
+    coach_hidden: 'Coaching is off: silent assessment mode.',
     composer_ph: 'Type your negotiating message... (or use the suggestions)',
     composer_send: 'Send', composer_hint: 'Hint',
     typing: 'typing...',
@@ -383,7 +387,7 @@
     dash_exported: 'Data exported', dash_deleted: 'Session deleted',
 
     set_title: 'Settings', set_name: 'Name', set_coach: 'Coaching during simulations',
-    set_coach_d: 'Coach notes appear after each message for instant guidance. Turn off for silent assessment.',
+    set_coach_d: 'Coach notes appear in the side panel without interrupting the conversation. Turn off for silent assessment.',
     set_lang: 'Language', set_about: 'About the platform',
     set_about_d: 'Tafahum is a negotiation and dialogue-management training platform built on a research proposal grounded in principled negotiation (Fisher & Ury) and the Thomas–Kilmann conflict-style model.',
 

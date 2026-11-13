@@ -33,21 +33,27 @@
 
             @php $navActive = ($page ?? 'home') === 'session' ? 'simulate' : ($page ?? 'home'); @endphp
             <nav class="nav" aria-label="{{ __('app.main_nav') }}">
-                <a class="nav-link {{ $navActive === 'home' ? 'active' : '' }}" data-nav="home" href="{{ route('home') }}"><span>{{ __('app.nav_home') }}</span></a>
-                <a class="nav-link {{ $navActive === 'diagnostic' ? 'active' : '' }}" data-nav="diagnostic" href="{{ route('diagnostic') }}"><span>{{ __('app.nav_diagnostic') }}</span></a>
-                <a class="nav-link {{ $navActive === 'learn' ? 'active' : '' }}" data-nav="learn" href="{{ route('learn') }}"><span>{{ __('app.nav_learn') }}</span></a>
-                <a class="nav-link {{ $navActive === 'simulate' ? 'active' : '' }}" data-nav="simulate" href="{{ route('simulate') }}"><span>{{ __('app.nav_simulate') }}</span></a>
-                <a class="nav-link {{ $navActive === 'dashboard' ? 'active' : '' }}" data-nav="dashboard" href="{{ route('dashboard') }}"><span>{{ __('app.nav_dashboard') }}</span></a>
+                @include('partials.nav-links')
             </nav>
 
             <div class="top-actions">
                 <button class="lang-toggle" onclick="TFApp.toggleLang()" title="Language">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke="currentColor" stroke-width="2"/></svg>
-                    <span>{{ __('app.lang_toggle') }}</span>
+                    <span class="hidden sm:inline">{{ __('app.lang_toggle') }}</span>
                 </button>
                 <button class="icon-btn" onclick="TFApp.openSettings()" aria-label="{{ __('app.settings') }}">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.56V21a2 2 0 1 1-4 0v-.07a1.7 1.7 0 0 0-1-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1H3a2 2 0 1 1 0-4h.07a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.07a1.7 1.7 0 0 0 1 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.07a1.7 1.7 0 0 0-1.56 1Z" stroke="currentColor" stroke-width="1.7"/></svg>
                 </button>
+
+                {{-- mobile navigation --}}
+                <details class="relative md:hidden">
+                    <summary class="icon-btn cursor-pointer list-none [&::-webkit-details-marker]:hidden" aria-label="{{ __('app.main_nav') }}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </summary>
+                    <nav class="absolute end-0 top-full z-[70] mt-2 w-60 rounded-card border border-line bg-white p-2 shadow-lift" aria-label="{{ __('app.main_nav') }}">
+                        @include('partials.nav-links', ['mobile' => true])
+                    </nav>
+                </details>
             </div>
         </div>
     </header>
@@ -75,6 +81,7 @@
     <script src="{{ asset('assets/js/scenarios.js') }}"></script>
     <script src="{{ asset('assets/js/analyzer.js') }}"></script>
     <script src="{{ asset('assets/js/evaluator.js') }}"></script>
+    <script src="{{ asset('assets/js/dialogue.js') }}"></script>
     <script src="{{ asset('assets/js/engine.js') }}"></script>
     <script src="{{ asset('assets/js/coach.js') }}"></script>
     <script src="{{ asset('assets/js/diagnostic.js') }}"></script>

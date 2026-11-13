@@ -14,4 +14,9 @@ class Diagnostic extends Model
             'scores' => 'array',
         ];
     }
+
+    public function trainee()
+    {
+        return $this->belongsTo(Trainee::class, 'trainee_token', 'token');
+    }
 }

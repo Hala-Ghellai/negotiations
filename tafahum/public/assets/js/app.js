@@ -50,7 +50,11 @@
         headers: Object.assign({ Accept: 'application/json' }, body ? { 'Content-Type': 'application/json' } : {}),
         body: body ? JSON.stringify(body) : undefined
       });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        const err = new Error('HTTP ' + res.status);
+        err.status = res.status;
+        throw err;
+      }
       return await res.json();
     } finally {
       clearTimeout(timer);
@@ -61,7 +65,9 @@
     try {
       return await api(method, path, body);
     } catch (err) {
-      markOffline();
+      // A 4xx means the server is reachable (validation/conflict), so it is
+      // not an offline condition — only network failures and 5xx are.
+      if (!err || !err.status || err.status >= 500) markOffline();
       console.warn('[api] ' + method + ' ' + path + ' — ' + (err && err.message || err));
       return null;
     }
@@ -97,7 +103,10 @@
     if (res && res.ok) {
       const byId = {};
       (res.sessions || []).forEach(x => { byId[x.id] = x; });
-      DATA.sessions.forEach(x => { if (!byId[x.id]) byId[x.id] = x; }); /* keep offline-only ones */
+      DATA.sessions.forEach(x => {
+        // Keep the richer local copy (full transcript) over a server summary.
+        if (!byId[x.id] || (x.messages && !byId[x.id].messages)) byId[x.id] = x;
+      });
       DATA.sessions = Object.values(byId).sort((a, b) =>
         new Date(b.endedAt || b.startedAt || 0) - new Date(a.endedAt || a.startedAt || 0));
       if (res.diagnostic) DATA.diagnostic = res.diagnostic;
@@ -636,6 +645,8 @@
     /* criteria sidebar */
     const critLabels = TFI.criteriaLabels(lang);
     const bars = {};
+    const coachNoteEl = el('div', { class: 'coach-note muted', id: 'coach-note' },
+      t(s.coachOn ? 'coach_empty' : 'coach_hidden'));
     const side = el('aside', { class: 'ses-side' },
       el('div', { class: 'card side-card' },
         el('b', { class: 'side-t' }, icon('gauge', 15), t('live_criteria')),
@@ -650,9 +661,18 @@
       el('div', { class: 'card side-card coach-toggle' },
         el('b', { class: 'side-t' }, icon('bulb', 15), t('coach_label')),
         el('label', { class: 'switch' },
-          el('input', { type: 'checkbox', checked: s.coachOn, onchange: e => { s.coachOn = e.target.checked; DATA.settings.coach = e.target.checked; persist(); } }),
+          el('input', {
+            type: 'checkbox', checked: s.coachOn,
+            onchange: e => {
+              s.coachOn = e.target.checked;
+              DATA.settings.coach = e.target.checked;
+              persist();
+              if (!s.coachOn) resetCoachNote(t('coach_hidden'));
+            }
+          }),
           el('span', { class: 'slider' })),
-        el('p', { class: 'muted tiny' }, t('coach_toggle_hint'))),
+        el('p', { class: 'muted tiny' }, t('coach_toggle_hint')),
+        coachNoteEl),
       el('div', { class: 'card side-card' },
         el('b', { class: 'side-t' }, icon('target', 15), t('sim_obj')),
         el('ul', { class: 'side-obj' }, (s.scenario.objectives || []).map(o => el('li', null, L(o))))));
@@ -698,10 +718,10 @@
       const res = TENG.userTurn(s, text);
       appendMsg({ role: 'user', text, ts: Date.now() }, true);
 
-      /* coach note first (immediate feedback) */
+      /* coaching feedback goes to the side panel, never into the dialogue */
       if (s.coachOn && res.rating && res.rating.valid) {
         const note = TFC.coachNote(s, res.analysis || TFA.analyze(text, lang), res.rating, s.turns);
-        if (note) appendMsg({ role: 'coach', text: note.title + (note.body ? '\n' + note.body : '') + (note.say ? '\n' + note.say : ''), ts: Date.now() }, true, note.tone);
+        if (note) showCoachNote(note);
       }
 
       /* typing indicator + counterpart messages */
@@ -754,7 +774,23 @@
     }
     function hideTyping() { const tip = $('#typing-ind'); if (tip) tip.remove(); }
 
+    function resetCoachNote(text) {
+      coachNoteEl.className = 'coach-note muted';
+      coachNoteEl.innerHTML = '';
+      coachNoteEl.textContent = text;
+    }
+
+    function showCoachNote(note) {
+      coachNoteEl.className = 'coach-note' + (note.tone ? ' tone-' + note.tone : '');
+      coachNoteEl.innerHTML = '';
+      coachNoteEl.append(el('b', { class: 'coach-note-t' }, note.title || ''));
+      if (note.body) coachNoteEl.append(el('p', null, note.body));
+      if (note.say) coachNoteEl.append(el('p', { class: 'coach-say' }, note.say));
+    }
+
     function appendMsg(m, animate, tone) {
+      /* Coach guidance lives in the side panel, not in the negotiation feed. */
+      if (m.role === 'coach') return;
       const who = m.role === 'user' ? (DATA.settings.name || t('ses_you')) :
         m.role === 'cp' ? L(s.scenario.counterpart.name) :
         m.role === 'coach' ? t('coach_label') : t('sys_note');
@@ -811,7 +847,8 @@
       scenario: s.scenario, lang: s.lang, userName: s.userName, userStyle: s.userStyle,
       startedAt: s.startedAt, endedAt: s.endedAt || TF.todayISO(),
       turns: s.turns, maxTurns: s.maxTurns, phase: s.phase,
-      messages: s.messages.map(m => ({ role: m.role, text: m.text, ts: m.ts, rating: m.rating ? { ...m.rating } : undefined })),
+      messages: s.messages.filter(m => m.role !== 'coach')
+        .map(m => ({ role: m.role, text: m.text, ts: m.ts, rating: m.rating ? { ...m.rating } : undefined })),
       flags: s.flags, outcome: s.outcome, evaluation: s.evaluation,
       coachOn: s.coachOn, ended: s.ended, endReason: s.endReason
     };
@@ -900,6 +937,10 @@
   async function viewReport(id, main) {
     let s = (liveSession && liveSession.id === id) ? liveSession : DATA.sessions.find(x => x.id === id);
 
+    // A dashboard summary has no transcript; always pull the full record
+    // for a deep link so the report is complete after a reload.
+    if (s && !Array.isArray(s.messages)) s = null;
+
     if (!s) {
       /* fetch the full session from the API (deep link / shared URL) */
       main.append(container(el('div', { class: 'card error-card' },
@@ -907,10 +948,10 @@
       const res = await apiTry('GET', '/api/sessions/' + encodeURIComponent(id));
       if (res && res.ok && res.session) {
         s = res.session;
-        if (!DATA.sessions.some(x => x.id === s.id)) {
-          DATA.sessions.unshift(s);
-          persist();
-        }
+        const idx = DATA.sessions.findIndex(x => x.id === s.id);
+        if (idx >= 0) DATA.sessions[idx] = s;
+        else DATA.sessions.unshift(s);
+        persist();
       }
       main.innerHTML = '';
     }
@@ -977,8 +1018,9 @@
       const sums = {}, counts = {};
       for (const s of sessions) {
         const ev = s.evaluation || TFE.aggregate(s);
+        const crit = (ev && ev.criteria) || {};
         for (const c of TFE.CRITERIA_IDS) {
-          sums[c] = (sums[c] || 0) + ev.criteria[c]; counts[c] = (counts[c] || 0) + 1;
+          sums[c] = (sums[c] || 0) + (crit[c] || 0); counts[c] = (counts[c] || 0) + 1;
         }
       }
       let minV = 101;
@@ -989,7 +1031,7 @@
     }
 
     /* training days streak */
-    const days = new Set(sessions.map(s => (s.endedAt || s.startedAt).slice(0, 10)));
+    const days = new Set(sessions.map(s => (s.endedAt || s.startedAt || '').slice(0, 10)).filter(Boolean));
     let streak = 0;
     for (let i = 0; ; i++) {
       const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);

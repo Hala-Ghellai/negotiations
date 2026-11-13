@@ -87,11 +87,11 @@
                bg-white/85 backdrop-blur-xl;
     }
     .topbar-inner {
-        @apply mx-auto flex w-[min(1180px,94%)] items-center gap-5 py-2.5;
+        @apply mx-auto flex w-[min(1180px,94%)] items-center gap-3 py-2.5 sm:gap-5;
     }
-    .brand { @apply flex items-center gap-2.5; }
+    .brand { @apply flex min-w-0 items-center gap-2.5; }
     .brand-txt b { @apply block text-[19px] leading-tight font-extrabold text-brand-ink; }
-    .brand-txt span { @apply block text-[10.5px] tracking-wide text-muted; }
+    .brand-txt span { @apply hidden text-[10.5px] tracking-wide text-muted sm:block; }
 
     .nav { @apply ms-auto hidden flex-wrap gap-1 md:flex; }
     .nav-link {
@@ -100,7 +100,7 @@
     }
     .nav-link.active { @apply bg-brand text-white hover:bg-brand; }
 
-    .top-actions { @apply flex items-center gap-2; }
+    .top-actions { @apply ms-auto flex items-center gap-2 md:ms-0; }
     .lang-toggle {
         @apply flex cursor-pointer items-center gap-1.5 rounded-[10px] border-[1.5px] border-line bg-white
                px-3 py-1.5 text-[13px] font-bold text-brand
@@ -404,6 +404,18 @@
     .side-t { @apply mb-2 flex items-center gap-[7px] text-brand-ink; }
     .side-obj { @apply ps-[18px] text-[13px]; }
     .side-obj li { @apply my-1; }
+
+    /* live coach note: kept outside the chat so it never interrupts the dialogue */
+    .coach-note {
+        @apply mt-3 rounded-[11px] border border-line bg-white/70 px-3 py-2.5
+               text-[12.5px] leading-relaxed text-ink;
+    }
+    .coach-note b { @apply mb-1 block text-gold-deep; }
+    .coach-note p { @apply m-0 mb-1 last:mb-0; }
+    .coach-note .coach-say { @apply text-brand-ink; }
+    .coach-note.tone-warn { @apply border-[#eccfca] bg-[#fdf4f2]; }
+    .coach-note.tone-good { @apply border-[#bfe3cd] bg-[#f2faf5]; }
+    .coach-note.tone-hint { @apply border-gold/30 bg-gold/5; }
 
     .score-row { @apply my-[7px] flex items-center gap-2; }
     .score-row.small { @apply my-[5px]; }

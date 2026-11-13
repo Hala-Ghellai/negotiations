@@ -45,24 +45,26 @@ class TrainingSession extends Model
      */
     public function toClientPayload(): array
     {
+        $scenario = $this->scenario ?? [];
+
         return [
             'id' => $this->id,
             'scenarioId' => $this->scenario_id,
             'custom' => $this->custom,
-            'scenario' => $this->scenario,
+            'scenario' => $scenario,
             'lang' => $this->lang,
             'userName' => $this->trainee_name,
             'userStyle' => $this->user_style,
             'coachOn' => $this->coach_on,
             'turns' => $this->turns,
-            'maxTurns' => $this->scenario['maxTurns'] ?? 14,
+            'maxTurns' => $scenario['maxTurns'] ?? 14,
             'phase' => 'closing',
             'startedAt' => optional($this->started_at)->toISOString(),
             'endedAt' => optional($this->ended_at)->toISOString(),
             'messages' => $this->messages ?? [],
             'flags' => $this->flags ?? (object) [],
-            'evaluation' => $this->evaluation,
-            'outcome' => $this->outcome,
+            'evaluation' => $this->evaluation ?? [],
+            'outcome' => $this->outcome ?? [],
             'ended' => true,
             'endReason' => $this->end_reason,
         ];
@@ -72,6 +74,7 @@ class TrainingSession extends Model
     public function toSummary(): array
     {
         $scenario = $this->scenario ?? [];
+        $evaluation = $this->evaluation ?? [];
 
         return [
             'id' => $this->id,
@@ -83,15 +86,15 @@ class TrainingSession extends Model
             'turns' => $this->turns,
             'endReason' => $this->end_reason,
             'scenario' => ['title' => $scenario['title'] ?? null],
-            'overall' => $this->evaluation['overall'] ?? null,
-            'behavioural' => $this->evaluation['behavioural'] ?? null,
+            'overall' => $evaluation['overall'] ?? null,
+            'behavioural' => $evaluation['behavioural'] ?? null,
             'outcome' => $this->outcome ? [
                 'type' => $this->outcome['type'] ?? null,
                 'quality' => $this->outcome['quality'] ?? null,
                 'overall' => $this->outcome['overall']
-                    ?? $this->evaluation['overall'] ?? null,
+                    ?? $evaluation['overall'] ?? null,
             ] : null,
-            'evaluation' => $this->evaluation,
+            'evaluation' => $evaluation,
             'startedAt' => optional($this->started_at)->toISOString(),
             'endedAt' => optional($this->ended_at)->toISOString(),
         ];

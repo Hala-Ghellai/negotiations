@@ -5,19 +5,10 @@
    ============================================================ */
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
+    const M = require('./modules.js');
     module.exports = factory(
-      require('../assets/js/core.js'),
-      require('../assets/js/i18n.js'),
-      require('../assets/js/scenarios.js'),
-      require('../assets/js/analyzer.js'),
-      require('../assets/js/evaluator.js'),
-      require('../assets/js/engine.js'),
-      require('../assets/js/coach.js'),
-      require('../assets/js/diagnostic.js'),
-      require('../assets/js/knowledge.js'),
-      require('../assets/js/charts.js'),
-      require('../assets/js/pdfwriter.js'),
-      require('../assets/js/report.js')
+      M.TF, M.TFI, M.TFS, M.TFA, M.TFE, M.TENG,
+      M.TFC, M.TFD, M.TFK, M.TFCH, M.TFPDF, M.TFR
     );
   } else {
     root.TFT = factory(root.TF, root.TFI, root.TFS, root.TFA, root.TFE, root.TENG, root.TFC, root.TFD, root.TFK, root.TFCH, root.TFPDF, root.TFR);

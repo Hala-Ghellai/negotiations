@@ -26,7 +26,17 @@
     }
     for (const c of children.flat(9)) {
       if (c == null || c === false) continue;
-      node.append(c.nodeType ? c : document.createTextNode(String(c)));
+      if (c.nodeType) {
+        node.append(c);
+      } else if (c && c.__svg) {
+        // Trusted inline icon markup produced by icon().
+        const tpl = document.createElement('template');
+        tpl.innerHTML = String(c);
+        node.append(tpl.content);
+      } else {
+        // Everything else (including user text) stays a safe text node.
+        node.append(document.createTextNode(String(c)));
+      }
     }
     return node;
   }
@@ -158,7 +168,10 @@
   function icon(name, size, cls) {
     const d = PATHS[name] || PATHS.doc;
     const s = size || 20;
-    return `<svg class="ic ${cls || ''}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+    const svg = new String(`<svg class="ic ${cls || ''}" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`);
+    // Marked so el() can render it as markup, while ordinary strings stay text.
+    svg.__svg = true;
+    return svg;
   }
 
   /* ---------- storage ---------- */

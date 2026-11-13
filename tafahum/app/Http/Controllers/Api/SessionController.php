@@ -22,7 +22,9 @@ class SessionController extends Controller
             'session.id' => ['required', 'string', 'max:24'],
             'session.scenarioId' => ['required', 'string', 'max:40'],
             'session.scenario' => ['required', 'array'],
-            'session.messages' => ['required', 'array'],
+            // A session may be ended before the trainee sends a message,
+            // so an empty transcript is valid as long as it is present.
+            'session.messages' => ['present', 'array'],
             'session.lang' => ['required', 'string', 'max:5'],
             'session.turns' => ['required', 'integer', 'min:0', 'max:200'],
             'session.userName' => ['sometimes', 'nullable', 'string', 'max:120'],
@@ -40,29 +42,49 @@ class SessionController extends Controller
         $trainee = Trainee::firstOrCreate(['token' => $data['token']]);
         $s = $data['session'];
 
-        $session = TrainingSession::updateOrCreate(
-            ['id' => $s['id']],
-            [
-                'trainee_token' => $trainee->token,
-                'trainee_name' => (string) ($s['userName'] ?? ''),
-                'scenario_id' => $s['scenarioId'],
-                'custom' => (bool) ($s['scenario']['custom'] ?? false),
-                'lang' => $s['lang'],
-                'user_style' => $s['userStyle'] ?? null,
-                'coach_on' => (bool) ($s['coachOn'] ?? true),
-                'turns' => $s['turns'],
-                'end_reason' => $s['endReason'] ?? null,
-                'scenario' => $s['scenario'],
-                'messages' => $s['messages'],
-                'flags' => $s['flags'] ?? [],
-                'evaluation' => $s['evaluation'] ?? [],
-                'outcome' => $s['outcome'] ?? [],
-                'started_at' => $s['startedAt'] ?? null,
-                'ended_at' => $s['endedAt'] ?? null,
-            ]
-        );
+        $session = TrainingSession::find($s['id']);
 
-        return response()->json(['ok' => true, 'id' => $session->id], 201);
+        // A browser-generated id must never let one trainee overwrite
+        // another trainee's saved session.
+        if ($session && $session->trainee_token !== $trainee->token) {
+            return response()->json([
+                'ok' => false,
+                'error' => 'session_conflict',
+            ], 409);
+        }
+
+        $wasRecentlyCreated = false;
+        if (! $session) {
+            $session = new TrainingSession(['id' => $s['id']]);
+            $wasRecentlyCreated = true;
+        }
+
+        $session->fill([
+            'trainee_token' => $trainee->token,
+            'trainee_name' => (string) ($s['userName'] ?? ''),
+            'scenario_id' => $s['scenarioId'],
+            'custom' => (bool) ($s['scenario']['custom'] ?? false),
+            'lang' => $s['lang'],
+            'user_style' => $s['userStyle'] ?? null,
+            'coach_on' => (bool) ($s['coachOn'] ?? true),
+            'turns' => $s['turns'],
+            'end_reason' => $s['endReason'] ?? null,
+            'scenario' => $s['scenario'],
+            'messages' => $s['messages'],
+            'flags' => $s['flags'] ?? [],
+            'evaluation' => $s['evaluation'] ?? [],
+            'outcome' => $s['outcome'] ?? [],
+            'started_at' => $s['startedAt'] ?? null,
+            'ended_at' => $s['endedAt'] ?? null,
+        ]);
+
+        $session->save();
+
+        return response()->json([
+            'ok' => true,
+            'id' => $session->id,
+            'created' => $wasRecentlyCreated,
+        ], $wasRecentlyCreated ? 201 : 200);
     }
 
     /**
